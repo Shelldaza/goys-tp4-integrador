@@ -48,7 +48,9 @@ El esquema se repite en ambos proyectos con dispositivos independientes.
 
 En GNS3, `e0` corresponde a `ether1` de RouterOS, `e1` a `ether2`, y así sucesivamente. En R2, `ether2` queda libre.
 
-**Evidencia pendiente:** incorporar una captura de la topología completa, con nombres y enlaces visibles, acompañada de una leyenda numerada.
+![Topología de EMPRESA en GNS3 con routers, hosts y red de gestión](../capturas/fase0/01-topologia-empresa.png)
+
+*Figura 1: Topología de EMPRESA y conexiones de gestión.*
 
 ### 0.4. Plan de direccionamiento
 
@@ -143,7 +145,143 @@ Las pruebas desde VPCS serán manuales. Se realizarán tres recorridos completos
 
 ## Fase 1 — Identificación y acceso de gestión
 
-Se documentarán nombres, IP estáticas, deshabilitación del cliente DHCP y acceso SSH, con sus comandos y capturas.
+### 1.1. Objetivo
+
+Establecer nombres y direcciones estáticas de gestión para los tres routers, y comprobar su acceso mediante SSH desde Windows.
+
+### 1.2. Inspección
+
+Se consultaron las interfaces, direcciones y servicios disponibles:
+
+```routeros
+/system identity print
+/interface print
+/ip address print
+/ip dhcp-client print
+/ip service print
+```
+
+Se identificó `ether1` como interfaz de gestión y se comprobó que los routers disponen de una interfaz loopback nativa llamada `lo`.
+
+### 1.3. Configuración de los routers
+
+Los siguientes comandos permiten reproducir la configuración. Antes de ejecutar una instrucción `add`, se debe comprobar que la dirección no exista para evitar duplicados.
+
+#### EMPRESA-R1
+
+```routeros
+/system identity set name=EMPRESA-R1
+/ip address add address=192.168.57.10/24 interface=ether1 comment="Gestion fija MCP"
+/ip dhcp-client disable [find where interface=ether1]
+```
+
+#### EMPRESA-R2
+
+```routeros
+/system identity set name=EMPRESA-R2
+/ip address add address=192.168.57.11/24 interface=ether1 comment="Gestion fija MCP"
+/ip dhcp-client disable [find where interface=ether1]
+```
+
+#### EMPRESA-R3
+
+```routeros
+/system identity set name=EMPRESA-R3
+/ip address add address=192.168.57.12/24 interface=ether1 comment="Gestion fija MCP"
+/ip dhcp-client disable [find where interface=ether1]
+```
+
+El comentario es una etiqueta administrativa y no afecta el funcionamiento de la dirección.
+
+### 1.4. Decisiones tomadas
+
+- **Identidades diferentes:** permiten reconocer cada router en las consolas y sesiones remotas. El nombre del nodo en GNS3 no reemplaza la identidad de RouterOS.
+- **Direcciones estáticas:** mantienen accesos conocidos sin depender de concesiones DHCP.
+- **Cliente DHCP deshabilitado en ether1:** evita recibir una dirección dinámica adicional en gestión. No implica deshabilitar DHCP en toda la red.
+- **Interfaz dedicada a gestión:** separa el cableado de administración del utilizado para las LAN y los enlaces entre routers.
+
+Las restricciones de acceso y los permisos definitivos se configurarán en la fase de seguridad.
+
+### 1.5. Verificación
+
+En cada router se ejecutaron:
+
+```routeros
+/system identity print
+/ip address print
+/ip dhcp-client print
+```
+
+Las capturas muestran el siguiente estado:
+
+| Router | Identidad | Dirección en ether1 | Cliente DHCP |
+|---|---|---|---|
+| R1 | EMPRESA-R1 | 192.168.57.10/24 | Deshabilitado |
+| R2 | EMPRESA-R2 | 192.168.57.11/24 | Deshabilitado |
+| R3 | EMPRESA-R3 | 192.168.57.12/24 | Deshabilitado |
+
+Las direcciones aparecen sin la bandera `D` de dinámicas. El cliente DHCP muestra la bandera `X` de deshabilitado.
+
+Los valores `yes` en `USE-PEER-DNS` y `ADD-DEFAULT-ROUTE` son opciones del cliente; no indican que esté activo.
+
+![Identidad, dirección estática y cliente DHCP deshabilitado en EMPRESA-R1](../capturas/fase1/01-gestion-r1.png)
+
+*Figura 2: Configuración de gestión de EMPRESA-R1.*
+
+![Identidad, dirección estática y cliente DHCP deshabilitado en EMPRESA-R2](../capturas/fase1/02-gestion-r2.png)
+
+*Figura 3: Configuración de gestión de EMPRESA-R2.*
+
+![Identidad, dirección estática y cliente DHCP deshabilitado en EMPRESA-R3](../capturas/fase1/03-gestion-r3.png)
+
+*Figura 4: Configuración de gestión de EMPRESA-R3.*
+
+### 1.6. Acceso SSH desde Windows
+
+Cada conexión se realiza por separado:
+
+```powershell
+ssh admin@192.168.57.10
+ssh admin@192.168.57.11
+ssh admin@192.168.57.12
+```
+
+En el primer acceso, la huella de la clave de host debe verificarse antes de aceptarla.
+
+Dentro de la sesión se consulta:
+
+```routeros
+/system identity print
+```
+
+La identidad debe coincidir con el router de destino. Para cerrar la sesión:
+
+```routeros
+/quit
+```
+
+Se comprobó el acceso a los tres routers. La siguiente captura muestra la conexión a EMPRESA-R2 como ejemplo representativo.
+
+![Conexión SSH desde Windows a 192.168.57.11 y respuesta de identidad EMPRESA-R2](../capturas/fase1/04-acceso-ssh.png)
+
+*Figura 5: Verificación del acceso de administración mediante SSH.*
+
+Las contraseñas se ingresan localmente y no se incluyen en capturas ni archivos del repositorio.
+
+### 1.7. Resultado 
+
+Los tres routers quedaron identificados y accesibles mediante sus direcciones estáticas de gestión.
+
+Se comprobó que VMnet1 utiliza el rango DHCP
+192.168.57.128–192.168.57.254. Las direcciones estáticas
+de EMPRESA y las previstas para GEMELO quedan fuera de ese rango.
+
+![Rango DHCP de VMnet1 en VMware](../capturas/fase1/05-rango-dhcp.png)
+
+*Figura 6: Rango DHCP de la red de gestión.*
+Esta fase verifica el acceso de administración. La conectividad entre LAN se comprobará después de configurar el direccionamiento interno y OSPF.
+
+La cuenta `admin` se utiliza temporalmente durante el armado. Las cuentas definitivas y las restricciones de servicios se configurarán en la fase 4.
 
 ## Fase 2 — Direccionamiento interno y hosts
 
