@@ -10,7 +10,7 @@
 | Nombre | Usuario de GitHub | Rol en el grupo |
 |--------|-------------------|-----------------|
 | Hiriart, Irineo | IrineoHiriart215 | Investigación, artículo y póster |
-| Facundo | Shelldaza | Demo e implementación, evidencias |
+| Daza, Facundo | Shelldaza | Demo e implementación, evidencias |
 
 ## 🎯 Proyecto
 
