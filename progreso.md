@@ -10,7 +10,7 @@
 | Nombre | Usuario de GitHub | Rol en el grupo |
 |--------|-------------------|-----------------|
 | Facundo Daza | Shelldaza | Implementación de la demo, integración MCP, seguridad, pruebas y documentación técnica |
-| Irineo Hiriart | irineoHiriart215 | Investigación bibliográfica, artículo de revisión y póster |
+| Irineo Hiriart | IrineoHiriart215 | Investigación bibliográfica, artículo de revisión y póster |
 
 Ambos participan en la revisión del trabajo, el registro de avances y la defensa.
 
@@ -30,6 +30,7 @@ Ambos participan en la revisión del trabajo, el registro de avances y la defens
 | 26/10/2026 | Se definió la modalidad B y el alcance de una demo de diagnóstico con EMPRESA y GEMELO en GNS3. | Facundo | Por completar |
 | 26/10/2026 | Se propuso distribuir las responsabilidades: Facundo desarrolla la demo y aporta evidencias, mientras que Irineo prepara la investigación, el artículo y el póster. | Ambos | Por completar |
 | 26/10/2026 | Se decidió excluir la sincronización automática del gemelo y el control de proyectos y nodos mediante la IA para reducir la complejidad. | Facundo | Por completar |
+| 27/10/2026 | Se configuró la identidad de Git y se agregaron en documento/fuentes.md las 10 fuentes iniciales con la cobertura de requisitos del artículo. | Irineo | Por completar |
 
 Las pruebas previas se registran retrospectivamente. Completar sus fechas y referencias a commits cuando se disponga de esos datos.
 
@@ -48,7 +49,7 @@ Las pruebas previas se registran retrospectivamente. Completar sus fechas y refe
 
 ### Pendientes
 
-- [ ] Completar el usuario de GitHub de Irineo.
+- [x] Completar el usuario de GitHub de Irineo.
 - [x] Confirmar aceptación del reparto de tareas entre ambos.
 - [ ] Verificar colaboradores del grupo y docentes en el repositorio.
 - [ ] Incorporar y revisar el README 
