@@ -1,165 +1,232 @@
-# TP4 — Proyecto Integrador + Feria de Redes
+# IA aplicada al diagnóstico de redes con MCP y un gemelo digital en GNS3
 
-> **GOYS** — Gestión Operativa y Seguridad en Redes · UTN FR La Plata
-> **Peso:** 60% de la nota del bloque Redes/Operación
-> **Muestra:** Feria de Redes (última clase del bloque)
+Trabajo Práctico Integrador N.º 4 de **Gestión Operativa y Seguridad en Redes**, 
 
-Este es el **repositorio base del Trabajo Práctico Integrador (TP4)**. Un integrante del grupo lo **forkea**, agrega al resto como **colaboradores**, y todo el trabajo colaborativo del TP4 se hace acá.
+Universidad Tecnológica Nacional - Facultad Regional La Plata.
 
----
+**Modalidad:** B: Artículo de revisión del estado del arte.  
+**Integrantes:** Facundo Daza e Irineo Hiriart.
 
-## 1. ¿Qué es el TP4?
+## 1. Descripción
 
-El TP4 integra **las 3 áreas de la materia** —**Redes**, **Operación (Gestión)** y **Seguridad**— en un proyecto con mayor autonomía:
+El trabajo estudia la integración de inteligencia artificial, Model Context Protocol (MCP) y gemelos digitales para asistir en el diagnóstico de problemas de red y evaluar posibles soluciones antes de recomendarlas para una red operativa.
 
-| Área | Qué cubre |
-|------|-----------|
-| 🔌 **Redes** | Topología, routing (BGP/OSPF), switching, VXLAN, containers, L2/L3 |
-| ⚙️ **Operación (Gestión)** | Automatización (Ansible), monitoreo (Prometheus/Grafana), orquestación (K3s), GitOps |
-| 🛡️ **Seguridad** | Segmentación, network policies, mTLS, Zero Trust, Cilium/Hubble |
+La investigación se acompaña de una demostración en GNS3 con dos entornos:
 
-Se muestra al final en una **Feria de Redes** (formato congreso): cada grupo monta una **estación** con póster, documento y demo funcionando, y la defiende frente a docentes, compañeros e invitados.
+- **EMPRESA:** representa la red operativa. La IA dispone de acceso de lectura.
+- **GEMELO:** reproduce manualmente la configuración relevante de EMPRESA y permite probar modificaciones.
 
-Cada grupo elige **UNA** de las 3 modalidades (sección 2).
+Ambas redes están emuladas en GNS3. No se utilizan equipos de una red de producción real.
 
----
+## 2. Objetivos
 
-## 2. Modalidades (elegir UNA)
+- Investigar el estado del arte de la automatización de redes mediante IA y gemelos digitales.
+- Analizar sus oportunidades, limitaciones y riesgos de seguridad.
+- Implementar una demostración de diagnóstico mediante herramientas MCP.
+- Probar una corrección en un entorno separado antes de recomendarla.
+- Demostrar el uso de permisos diferenciados y controles de acceso.
 
-| Modalidad | Qué es | Template |
-|-----------|--------|----------|
-| **A — Proyecto de Desarrollo** | Diseñar e implementar una solución que integre redes, containers, automatización y monitoreo | `templates/template-modalidad-a.md` |
-| **B — Artículo de Revisión del Estado del Arte** | Investigar el estado del arte de una tecnología, sus innovaciones emergentes y oportunidades | `templates/template-modalidad-b.md` |
-| **C — Trabajo de Campo** | Analizar una red real (o caso de estudio) y proponer mejoras | `templates/template-modalidad-c.md` |
+## 3. Alcance de la demostración
 
-### ¿Cómo integra cada modalidad las 3 áreas?
+Cada entorno contempla tres routers MikroTik CHR y dos hosts VPCS, con direccionamiento IPv4, enrutamiento OSPF y reglas de firewall.
 
-| Área | A — Desarrollo | B — Estado del Arte | C — Trabajo de Campo |
-|------|----------------|---------------------|----------------------|
-| 🔌 **Redes** | Topología + routing + containers **implementados** | Estado del arte de una tecnología de red | Relevamiento de la red real |
-| ⚙️ **Operación** | Ansible + monitoreo **automatizados** | Network automation, observabilidad | Propuesta de automatización/monitoreo |
-| 🛡️ **Seguridad** | Network policies, segmentación, mTLS | Zero Trust, eBPF security, mTLS | Segmentación + mejoras de seguridad |
+Los proyectos y nodos se preparan e inician manualmente. La configuración relevante y la falla se reproducen manualmente en GEMELO.
 
-> ⚠️ **La seguridad NO es opcional en ninguna modalidad.** Sin importar cuál elijan, el proyecto debe mostrar cómo aborda la seguridad de la red.
+La demostración no incluye:
 
-> 📖 El detalle de cada modalidad está en su template. El formato del documento (portada UTN, A4, estilo) está en `templates/template-documento.md`.
+- Sincronización automática entre EMPRESA y GEMELO.
+- Descubrimiento o incorporación automática de dispositivos.
+- Creación, cableado o inicio de nodos mediante la IA.
+- Aplicación automática de cambios sobre EMPRESA.
+- Resolución general de cualquier problema de red.
 
----
+El gemelo permite evaluar el escenario reproducido. Sus resultados no constituyen una garantía para cualquier condición de producción.
 
-## 3. Arrancar: fork + grupo + colaboradores
+## 4. Escenario de prueba
 
-### 3.1. Un integrante hace el fork
+Una regla incorrecta de firewall bloquea el tráfico ICMP entre una PC y el host que representa al servidor.
 
-1. Ese integrante entra a este repositorio y hace **Fork** (botón arriba a la derecha).
-2. Ahora tiene una copia en su cuenta: `tu-usuario/goys-tp4-integrador`.
+El procedimiento de demostración es:
 
-### 3.2. Sumar colaboradores (compañeros + docentes)
+1. Comprobar que ambos entornos presentan el mismo problema.
+2. Solicitar a la IA que investigue el síntoma.
+3. Consultar interfaces, direcciones, rutas, vecinos OSPF y reglas de firewall mediante MCP.
+4. Identificar y justificar una corrección.
+5. Probar el cambio exclusivamente en GEMELO.
+6. Verificar que se recupera la comunicación permitida.
+7. Comprobar que un destino protegido continúa bloqueado.
+8. Entregar una recomendación para el administrador.
 
-1. En el fork, ir a **Settings → Collaborators and teams → Add people**.
-2. Agregar a **cada integrante** del grupo (por su usuario de GitHub).
-3. Agregar también a los **docentes** para que puedan revisar el trabajo:
-   - `ofalabel` — **Osvaldo Falabella** (titular de la materia)
-   - `rodriguezemautn` — **Emanuel Rodríguez** (bloque Redes/Operación)
-4. Cada uno acepta la invitación (llega por mail/notificación).
+Las pruebas de ping se ejecutan manualmente desde VPCS y se contrastan con los contadores del firewall. La validación es asistida: no se automatizan las pruebas de los hosts.
 
-> ⚠️ **Todos los integrantes deben aparecer como colaboradores y con commits propios.** Si alguien no aparece en el historial de git, no acredita el TP.
+Durante la demostración, EMPRESA conserva la falla para evidenciar que la corrección se aplicó únicamente en GEMELO.
 
-### 3.3. Clonar y configurar identidad
+## 5. Tecnologías
 
-```bash
-# Cada integrante clona el fork
-git clone https://github.com/<grupo>/goys-tp4-integrador.git
+| Tecnología | Función |
+|---|---|
+| GNS3 | Ejecutar los dos entornos de laboratorio |
+| MikroTik CHR / RouterOS 7 | Enrutamiento, filtrado y administración |
+| VPCS | Generar tráfico ICMP para las pruebas |
+| OSPF | Intercambiar rutas entre los routers |
+| Firewall de RouterOS | Aplicar permisos y restricciones de tráfico |
+| Python | Implementar el servidor y las herramientas MCP |
+| MCP | Permitir que la IA invoque herramientas del laboratorio |
+| Paramiko y SSH | Consultar y configurar los routers |
+| ChatGPT | Analizar resultados y utilizar las herramientas disponibles |
+| tunnel-client | Conectar el servidor MCP local con ChatGPT |
+| Git y GitHub | Versionar código, documentación y evidencias |
+
+Las versiones concretas utilizadas se registrarán al completar las pruebas de integración.
+
+## 6. Seguridad
+
+La propuesta incorpora los siguientes controles:
+
+- Cuenta dedicada de lectura para consultar EMPRESA.
+- Credenciales independientes para operar sobre GEMELO.
+- Herramientas MCP con destinos y operaciones restringidos.
+- Ausencia de una herramienta genérica para ejecutar comandos arbitrarios.
+- Verificación de claves de host SSH.
+- Restricción del acceso de administración al equipo autorizado.
+- Separación de las redes de datos de ambos entornos.
+- Credenciales fuera del repositorio y de los argumentos enviados por la IA.
+- Registro de las operaciones realizadas.
+- Verificación de que la corrección conserva los bloqueos requeridos.
+
+La cuenta de GEMELO necesita permisos de escritura de RouterOS. La restricción a una operación concreta se implementa además en el código MCP, no equivale a un permiso nativo de RouterOS limitado a una única regla.
+
+Estos controles se consideran implementados únicamente después de verificarlos y guardar sus evidencias.
+
+## 7. Estado del proyecto
+
+### Prueba de concepto realizada
+
+- Conexión de un servidor MCP local con un router MikroTik en GNS3.
+- Consulta del nombre del router mediante SSH.
+- Integración con ChatGPT mediante un túnel.
+- Verificación de lectura en vivo después de cambiar manualmente el nombre del router.
+- Se confirma la viabilidad del proyecto.
+
+### Pendiente de implementación y validación
+
+- Preparar los proyectos EMPRESA y GEMELO.
+- Configurar direccionamiento, OSPF y firewall.
+- Implementar y verificar los permisos definitivos.
+- Incorporar las herramientas MCP del escenario.
+- Ejecutar las pruebas positivas y negativas.
+- Repetir la demostración al menos tres veces.
+- Preparar las evidencias y la grabación de respaldo.
+
+El avance detallado se registra en `progreso.md`
+
+## 8. Estructura del repositorio
+
+| Ubicación | Contenido |
+|---|---|
+| `README.md` | Descripción e instrucciones generales |
+| `progreso.md` | Bitácora de aportes, decisiones y avances |
+| `templates/` | Plantillas y checklist de la cátedra |
+| `documento/` | Artículo final en PDF y su fuente editable |
+| `poster/` | Póster A1 editable y PDF |
+| `demo/` | Código, dependencias y configuraciones de ejemplo |
+| `capturas/` | Evidencias de funcionamiento y seguridad |
+| `diagramas/` | Diagramas de arquitectura y topología |
+
+## 9. Reproducción del laboratorio
+
+### Requisitos
+
+- GNS3 y su entorno de virtualización funcionando.
+- Imagen MikroTik CHR 7.16 obtenida desde una fuente oficial.
+- VPCS disponible en GNS3.
+- Python compatible con las dependencias del proyecto.
+- Cliente SSH.
+- Acceso a Internet para utilizar ChatGPT y el túnel MCP.
+
+Las imágenes de máquinas virtuales, credenciales y ejecutables no se incluyen en el repositorio.
+
+### Clonar el repositorio
+
+```powershell
+git clone https://github.com/Shelldaza/goys-tp4-integrador.git
 cd goys-tp4-integrador
-
-# Configurar identidad (usar el mail de la facultad)
-git config user.name "Apellido, Nombre"
-git config user.email "tu-email@alumnos.frlp.utn.edu.ar"
 ```
 
----
+### Preparar la demo
 
-## 4. Estructura del repositorio
+La implementación está en desarrollo. Una vez incorporados los archivos y comprobada la integración, se completará esta sección con:
 
-```
-goys-tp4-integrador/
-├── README.md              # esta guía
-├── progreso.md            # bitácora del grupo (qué hizo cada uno)
-├── templates/             # templates de modalidad + documento + checklist
-├── documento/             # documento final (PDF + fuente)
-├── poster/                # póster A1 (editable + PDF) + guía
-├── demo/                  # código/scripts de la demo (estación)
-├── capturas/              # capturas y evidencias
-└── diagramas/             # diagramas de arquitectura/topología
-```
+1. Versiones y recursos utilizados.
+2. Topología y tabla de direccionamiento.
+3. Configuración de cada router y host.
+4. Instalación de dependencias Python.
+5. Configuración del inventario y las credenciales locales.
+6. Inicio del servidor MCP y del túnel.
+7. Introducción de la falla.
+8. Pruebas de diagnóstico, corrección y restauración.
 
----
+Las instrucciones finales deberán permitir repetir el escenario sin depender de conversaciones previas.
 
-## 5. Trabajo colaborativo (cómo laburar en grupo)
+## 10. Evidencias y resultados
 
-### Flujo recomendado (ramas cortas + pull requests)
+Se documentarán las siguientes comprobaciones:
 
-```bash
-# 1. Actualizar antes de empezar
-git pull origin main
+| Comprobación | Evidencia esperada |
+|---|---|
+| Red operativa durante la falla | Vecinos OSPF FULL y rutas presentes |
+| Bloqueo inicial | Ping fallido y contador de la regla |
+| Lectura real mediante MCP | Respuestas identificadas por equipo |
+| Restricción de EMPRESA | Intento de escritura rechazado |
+| Corrección en GEMELO | Regla modificada y ping recuperado |
+| Seguridad conservada | Destino protegido bloqueado y contador de descarte |
+| EMPRESA sin cambios | Regla del incidente activa y ping fallido |
+| Repetibilidad | Registro de tres ejecuciones completas |
 
-# 2. Rama por tarea
-git checkout -b documento-introduccion
+Los resultados se incorporarán después de realizar las pruebas. La conectividad ICMP no se presentará como validación de una aplicación o servicio TCP.
 
-# 3. Trabajar y commitear seguido (mensajes claros)
-git add .
-git commit -m "documento: escribe introducción y objetivos"
+## 11. Dependencia de Internet y respaldo
 
-# 4. Subir y abrir PR
-git push origin documento-introduccion
-# En GitHub: abrir Pull Request → otro integrante revisa → merge
+GNS3, los routers y las pruebas locales pueden funcionar sin Internet.
 
-# 5. Volver a main y repetir
-git checkout main
-git pull origin main
-```
+La interacción con ChatGPT mediante el túnel requiere conectividad. Para la feria se preparará una grabación local de una ejecución completa, acompañada de capturas y resultados.
 
-### Reglas de oro
+El material grabado se identificará como tal y se comprobará su reproducción sin conexión.
 
-- **Commits de TODOS**: cada integrante commitea con su usuario. Verificar al final con `git log --oneline`.
-- **No pushear directo a `main` sin revisar** (usar PRs para el documento y decisiones grandes).
-- **Pull antes de push** para no pisar trabajo ajeno.
-- **Nada de binarios/secretos**: no subir contraseñas, IPs privadas reales ni archivos pesados (ver `.gitignore`).
+## 12. Organización del trabajo
 
----
+| Integrante | Responsabilidades principales |
+|---|---|
+| Facundo Daza | Laboratorio GNS3, servidor MCP, controles de seguridad, pruebas, evidencias e instrucciones de reproducción |
+| Irineo Hiriart | Investigación bibliográfica, artículo de revisión y póster |
+| Ambos | Bitácora, revisión cruzada, conclusiones y defensa |
 
-## 6. Entregables (comunes a las 3 modalidades)
+Cada integrante realiza commits con su identidad. Los cambios se trabajan en ramas y se revisan mediante pull requests.
 
-| Elemento | Descripción |
-|----------|-------------|
-| 📄 **Documento** | 5-7 págs (modalidades A y B) o 6-8 (C), en PDF, en `documento/` |
-| 🖼️ **Póster A1** | Sintetiza problema, metodología, resultados y conclusiones. Autocontenido. En `poster/` |
-| 💻 **Demo / estación** | Funciona en la laptop del grupo, **offline**. En `demo/` |
-| 📂 **Repositorio** | Documento, fuentes, configs, capturas, póster editable + PDF |
+## 13. Entregables
 
-> ✅ Checklist completo en `templates/checklist-entrega.md`. Usarlo antes del ensayo y antes de la Feria.
+- Artículo de modalidad B de 5–7 páginas, en PDF y con fuente editable.
+- Póster A1 en formato editable y PDF.
+- Demostración de 3–5 minutos.
+- Código y configuraciones documentados.
+- Capturas y resultados verificables.
+- Grabación de respaldo.
+- Bitácora de participación del grupo.
+- Checklist de entrega completo.
 
----
+## 14. Trabajo futuro
 
-## 7. Cronograma
+- Actualización automática de la configuración del gemelo.
+- Incorporación de nuevos dispositivos.
+- Automatización de pruebas desde los hosts.
+- Evaluación de servicios de aplicación.
+- Ampliación de los escenarios de falla.
+- Evaluación de alternativas de IA local.
 
-| Momento | Qué pasa |
-|---------|----------|
-| Clase 2 (jueves 20/8) | Se forman los grupos (3-4), los mismos para toda la cursada |
-| Durante la cursada | Cada clase alimenta el TP4; el grupo define modalidad y tema |
-| Jueves 29/10 | Muestra TP3 + preparación/ensayos del TP4 |
-| Jueves 5/11 | **Feria de Redes** — muestra y defensa |
+Estas capacidades quedan fuera de la demostración inicial.
 
----
+## 15. Referencias
 
-## 8. Evaluación (60%)
+Las referencias bibliográficas completas se incluyen en el artículo de `documento/`.
 
-La nota combina **dimensión técnica (60%)** y **"Saber Ser" (40%)** — trabajo en equipo, comunicación, compromiso, pensamiento crítico, ética.
-
-- **Promoción directa:** TP4 >= 6 (con todos los TPs >= 6 y 75% de asistencia).
-- **Cursada regular:** TP4 >= 4 (más el resto de condiciones).
-
-> ⚠️ **Ausencia injustificada en la Feria = TP4 desaprobado.**
-
----
-
-**GOYS — UTN FR La Plata** · Titular: Osvaldo Falabella · Bloque Redes/Operación: Emanuel Rodríguez
+El artículo debe incorporar al menos seis referencias verificables, incluyendo un trabajo académico, documentación técnica oficial y un RFC o estándar, con un formato de citación consistente.
