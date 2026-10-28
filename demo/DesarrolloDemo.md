@@ -455,7 +455,151 @@ La comunicación entre LAN se verificará en F3, después de configurar OSPF.
 
 ## Fase 3 — Enrutamiento OSPF
 
-Pendiente: configurar OSPF y costos. Verificar vecinos FULL, rutas y comunicación entre LAN.
+### 3.1. Objetivo
+
+Intercambiar rutas entre los tres routers mediante OSPF y comprobar la comunicación entre las LAN, utilizando el enlace directo R1–R3 como camino preferido.
+
+### 3.2. Configuración aplicada
+
+Se creó una instancia OSPFv2 por router y se utilizaron las direcciones de las loopbacks como Router ID. Los tres equipos pertenecen al área backbone `0.0.0.0`.
+
+Los comandos ya fueron aplicados. Antes de repetir instrucciones `add`, comprobar las entradas existentes para evitar duplicados.
+
+#### EMPRESA-R1
+
+```routeros
+/routing ospf instance add name=ospf-v2 version=2 router-id=10.255.0.1
+/routing ospf area add name=backbone instance=ospf-v2 area-id=0.0.0.0
+/routing ospf interface-template add area=backbone interfaces=ether3 type=ptp cost=20 comment="F3 R1-R2"
+/routing ospf interface-template add area=backbone interfaces=ether4 type=ptp cost=10 comment="F3 R1-R3"
+/routing ospf interface-template add area=backbone interfaces=ether2 passive cost=1 comment="F3 LAN usuarios"
+/routing ospf interface-template add area=backbone interfaces=lo passive cost=1 comment="F3 loopback R1"
+```
+
+#### EMPRESA-R2
+
+```routeros
+/routing ospf instance add name=ospf-v2 version=2 router-id=10.255.0.2
+/routing ospf area add name=backbone instance=ospf-v2 area-id=0.0.0.0
+/routing ospf interface-template add area=backbone interfaces=ether3 type=ptp cost=20 comment="F3 R2-R1"
+/routing ospf interface-template add area=backbone interfaces=ether4 type=ptp cost=20 comment="F3 R2-R3"
+/routing ospf interface-template add area=backbone interfaces=lo passive cost=1 comment="F3 loopback R2"
+```
+
+#### EMPRESA-R3
+
+```routeros
+/routing ospf instance add name=ospf-v2 version=2 router-id=10.255.0.3
+/routing ospf area add name=backbone instance=ospf-v2 area-id=0.0.0.0
+/routing ospf interface-template add area=backbone interfaces=ether3 type=ptp cost=20 comment="F3 R3-R2"
+/routing ospf interface-template add area=backbone interfaces=ether4 type=ptp cost=10 comment="F3 R3-R1"
+/routing ospf interface-template add area=backbone interfaces=ether2 passive cost=1 comment="F3 LAN servidor"
+/routing ospf interface-template add area=backbone interfaces=lo passive cost=1 comment="F3 loopback R3"
+```
+
+En esta versión de RouterOS, las interfaces pasivas se configuran con `passive`, sin `=yes`.
+
+### 3.3. Decisiones tomadas
+
+- **Área única:** los tres routers pertenecen al backbone; no se requiere un diseño multiárea para este laboratorio.
+- **Router ID explícitos:** permiten identificar los equipos de forma estable.
+- **Enlaces punto a punto:** cada enlace conecta dos routers, por lo que se utiliza `type=ptp`, sin elección de DR y BDR.
+- **Interfaces pasivas:** las LAN y loopbacks se anuncian sin formar vecindades por ellas.
+- **Gestión excluida:** no se creó una plantilla para `ether1` ni se redistribuyeron todas las redes conectadas.
+- **Costos diferenciados:** el enlace R1–R3 tiene costo 10 y cada enlace por R2 tiene costo 20. Esto favorece el camino directo.
+
+Las interfaces pasivas de LAN y loopback tienen costo 1. La autenticación OSPF no se configura en esta fase.
+
+### 3.4. Verificación de vecinos y rutas
+
+Se consultaron:
+
+```routeros
+/routing ospf neighbor print detail without-paging
+/routing ospf interface print detail without-paging
+/ip route print without-paging
+```
+
+Se comprobó que cada router tiene dos vecinos en estado `Full`:
+
+| Router | Vecinos y sus Router ID |
+|---|---|
+| R1 | R2 — 10.255.0.2 y R3 — 10.255.0.3 |
+| R2 | R1 — 10.255.0.1 y R3 — 10.255.0.3 |
+| R3 | R1 — 10.255.0.1 y R2 — 10.255.0.2 |
+
+Las LAN y loopbacks aparecen como pasivas. `ether1` no participa en OSPF.
+
+Las rutas aprendidas se identifican con la bandera `o`. Las rutas activas muestran además la bandera `A`.
+
+| Router | Red remota | Siguiente salto observado |
+|---|---|---|
+| R1 | 10.20.0.0/24 | 10.0.13.2, por ether4 |
+| R2 | 10.10.0.0/24 | 10.0.12.1, por ether3 |
+| R2 | 10.20.0.0/24 | 10.0.23.2, por ether4 |
+| R3 | 10.10.0.0/24 | 10.0.13.1, por ether4 |
+
+En R2 se observaron dos rutas de igual costo hacia `10.0.13.0/30`, identificadas con `+` de ECMP. Corresponden a caminos por R1 y R3; no son entradas duplicadas incorrectamente.
+
+![Vecinos OSPF y rutas de EMPRESA-R1](../capturas/fase3/01-ospf-rutas-r1.png)
+
+*Figura 15: Vecindades y rutas de EMPRESA-R1.*
+
+![Vecinos OSPF y rutas de EMPRESA-R2](../capturas/fase3/02-ospf-rutas-r2.png)
+
+*Figura 16: Vecindades y rutas de EMPRESA-R2.*
+
+![Vecinos OSPF y rutas de EMPRESA-R3](../capturas/fase3/03-ospf-rutas-r3.png)
+
+*Figura 17: Vecindades y rutas de EMPRESA-R3.*
+
+### 3.5. Comunicación entre las LAN
+
+Desde EMPRESA-PC:
+
+```text
+ping 10.20.0.10
+trace 10.20.0.10
+```
+
+Desde EMPRESA-SRV:
+
+```text
+ping 10.10.0.10
+```
+
+| Prueba | Resultado |
+|---|---|
+| PC → SRV | 5 respuestas de 5 |
+| SRV → PC | 5 respuestas de 5 |
+
+El traceroute desde PC mostró:
+
+| Salto | Dirección | Equipo |
+|---|---|---|
+| 1 | 10.10.0.1 | R1 |
+| 2 | 10.0.13.2 | R3 |
+| 3 | 10.20.0.10 | SRV |
+
+Se confirmó el uso del enlace directo R1–R3.
+
+La respuesta final `Destination port unreachable` corresponde al puerto UDP cerrado utilizado por traceroute. El destino fue alcanzado; no representa una falla del enrutamiento.
+
+![Ping y traceroute desde EMPRESA-PC hacia EMPRESA-SRV](../capturas/fase3/04-pc-srv-trace.png)
+
+*Figura 18: Comunicación hacia SRV y comprobación del camino principal.*
+
+![Ping desde EMPRESA-SRV hacia EMPRESA-PC](../capturas/fase3/05-srv-pc.png)
+
+*Figura 19: Comunicación desde la LAN del servidor hacia la LAN de usuarios.*
+
+### 3.6. Resultado
+
+Los tres routers establecieron vecindades FULL y aprendieron las redes remotas mediante OSPF.
+
+Se verificó comunicación entre los hosts en ambos sentidos y preferencia del enlace directo R1–R3. La red de gestión quedó excluida del protocolo.
+
+La recuperación ante caída del enlace principal no se ensayó en esta fase. El siguiente paso será aplicar las políticas de seguridad.
 
 ## Fase 4 — Seguridad
 
