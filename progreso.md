@@ -33,6 +33,7 @@ Ambos participan en la revisión del trabajo, el registro de avances y la defens
 | 27/10/2026 | Se configuró la identidad de Git y se agregaron en documento/fuentes.md las 10 fuentes iniciales con la cobertura de requisitos del artículo. | Irineo | d720509 |
 | 27/10/2026 | Se creó demo/DesarrolloDemo.md y se documentó la Fase 0: topología, cableado, direccionamiento previsto, decisiones de diseño, seguridad y criterios de validación. Se definieron las fases restantes de implementación. | Facundo | 360a5e4 |
 | 27/10/2026 | Se documentó la Fase 1 en demo/DesarrolloDemo.md y se incorporaron capturas de topología, identidades, IP estáticas, DHCP deshabilitado y acceso SSH. Se verificó que las direcciones de gestión quedan fuera del pool DHCP de VMnet1. | Facundo | bf59f3d |
+| 27/10/2026 | Se configuraron las LAN, los enlaces internos, las loopbacks y las VPCS de EMPRESA. Se verificaron los tres enlaces entre routers en ambos sentidos y el acceso de cada host a su gateway, sin pérdidas en las pruebas. Se documentó F2 y se incorporaron ocho capturas. | Facundo | 19820b3 |
 
 Las pruebas previas se registran retrospectivamente. Completar sus fechas y referencias a commits cuando se disponga de esos datos.
 
@@ -57,9 +58,11 @@ Las pruebas previas se registran retrospectivamente. Completar sus fechas y refe
 - [x] Incorporar y revisar el README 
 - [x] Documentar el diseño de la demo y las fases de implementación.
 - [x] Documentar la Fase 1 e incorporar capturas de la configuración de gestión.
-- [ ] Configurar el direccionamiento interno, las loopbacks y las VPCS de EMPRES
-- [ ] Construir los dos entornos de GNS3.
-- [ ] Configurar direccionamiento, OSPF, firewall y permisos diferenciados.
+- [x] Configurar el direccionamiento interno, las loopbacks y las VPCS de EMPRESA.
+- [x] Verificar y documentar F2 con sus capturas.
+- [ ] Configurar OSPF y comprobar conectividad entre las LAN.
+- [ ] Configurar firewall y permisos diferenciados.
+- [ ] Preparar GEMELO y verificar su independencia y equivalencia con EMPRESA.
 - [ ] Implementar las herramientas MCP definitivas.
 - [ ] Preparar una falla reproducible de firewall.
 - [ ] Verificar diagnóstico, corrección en GEMELO y conservación de los bloqueos requeridos.
