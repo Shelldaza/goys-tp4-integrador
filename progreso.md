@@ -34,6 +34,7 @@ Ambos participan en la revisión del trabajo, el registro de avances y la defens
 | 27/10/2026 | Se creó demo/DesarrolloDemo.md y se documentó la Fase 0: topología, cableado, direccionamiento previsto, decisiones de diseño, seguridad y criterios de validación. Se definieron las fases restantes de implementación. | Facundo | 360a5e4 |
 | 27/10/2026 | Se documentó la Fase 1 en demo/DesarrolloDemo.md y se incorporaron capturas de topología, identidades, IP estáticas, DHCP deshabilitado y acceso SSH. Se verificó que las direcciones de gestión quedan fuera del pool DHCP de VMnet1. | Facundo | bf59f3d |
 | 27/10/2026 | Se configuraron las LAN, los enlaces internos, las loopbacks y las VPCS de EMPRESA. Se verificaron los tres enlaces entre routers en ambos sentidos y el acceso de cada host a su gateway, sin pérdidas en las pruebas. Se documentó F2 y se incorporaron ocho capturas. | Facundo | 19820b3 |
+| 27/10/2026 | Se configuró OSPFv2 en área 0 con Router ID explícitos, interfaces pasivas y costos que favorecen R1–R3. Se verificaron dos vecinos FULL por router, rutas aprendidas y comunicación entre PC y SRV en ambos sentidos. Se documentó F3 y se incorporaron cinco capturas. | Facundo | 695761c |
 
 Las pruebas previas se registran retrospectivamente. Completar sus fechas y referencias a commits cuando se disponga de esos datos.
 
@@ -60,7 +61,8 @@ Las pruebas previas se registran retrospectivamente. Completar sus fechas y refe
 - [x] Documentar la Fase 1 e incorporar capturas de la configuración de gestión.
 - [x] Configurar el direccionamiento interno, las loopbacks y las VPCS de EMPRESA.
 - [x] Verificar y documentar F2 con sus capturas.
-- [ ] Configurar OSPF y comprobar conectividad entre las LAN.
+- [x] Configurar OSPF y comprobar conectividad entre las LAN.
+- [x] Documentar F3 e incorporar sus capturas.
 - [ ] Configurar firewall y permisos diferenciados.
 - [ ] Preparar GEMELO y verificar su independencia y equivalencia con EMPRESA.
 - [ ] Implementar las herramientas MCP definitivas.
