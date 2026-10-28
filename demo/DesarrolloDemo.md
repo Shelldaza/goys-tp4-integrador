@@ -285,7 +285,173 @@ La cuenta `admin` se utiliza temporalmente durante el armado. Las cuentas defini
 
 ## Fase 2 — Direccionamiento interno y hosts
 
-Pendiente: configurar LAN, enlaces, loopbacks y VPCS. Comprobar conectividad entre vecinos directos.
+### 2.1. Objetivo
+
+Asignar direcciones a las LAN, los enlaces entre routers, las loopbacks y los hosts. Verificar conectividad entre vecinos directos antes de configurar OSPF.
+
+### 2.2. Configuración de los routers
+
+Se conservaron las direcciones de gestión de `ether1`. Las direcciones internas se asignaron según el diseño de F0.
+
+Los siguientes comandos documentan la configuración aplicada. No deben repetirse sin comprobar las entradas existentes.
+
+#### EMPRESA-R1
+
+```routeros
+/ip address add address=10.10.0.1/24 interface=ether2 comment="F2 LAN usuarios"
+/ip address add address=10.0.12.1/30 interface=ether3 comment="F2 enlace R1-R2"
+/ip address add address=10.0.13.1/30 interface=ether4 comment="F2 enlace R1-R3"
+/ip address add address=10.255.0.1/32 interface=lo comment="F2 loopback R1"
+```
+
+#### EMPRESA-R2
+
+```routeros
+/ip address add address=10.0.12.2/30 interface=ether3 comment="F2 enlace R2-R1"
+/ip address add address=10.0.23.1/30 interface=ether4 comment="F2 enlace R2-R3"
+/ip address add address=10.255.0.2/32 interface=lo comment="F2 loopback R2"
+```
+
+#### EMPRESA-R3
+
+```routeros
+/ip address add address=10.20.0.1/24 interface=ether2 comment="F2 LAN servidor"
+/ip address add address=10.0.23.2/30 interface=ether3 comment="F2 enlace R3-R2"
+/ip address add address=10.0.13.2/30 interface=ether4 comment="F2 enlace R3-R1"
+/ip address add address=10.255.0.3/32 interface=lo comment="F2 loopback R3"
+```
+
+### 2.3. Configuración de los hosts
+
+#### EMPRESA-PC
+
+```text
+ip 10.10.0.10 255.255.255.0 10.10.0.1
+save
+```
+
+#### EMPRESA-SRV
+
+```text
+ip 10.20.0.10 255.255.255.0 10.20.0.1
+save
+```
+
+Se configuraron direcciones estáticas para mantener extremos conocidos durante las pruebas. Cada gateway corresponde al router de su propia LAN.
+
+El comando `save` conserva la configuración de VPCS para futuros inicios. No se configuró DNS porque las pruebas utilizan direcciones IP.
+
+Las loopbacks usan `/32` para representar una dirección de cada router; posteriormente se utilizarán como referencia para los Router ID de OSPF.
+
+### 2.4. Verificación de direcciones y rutas
+
+En cada router se consultaron:
+
+```routeros
+/ip address print without-paging
+/ip route print without-paging
+```
+
+Se verificaron las direcciones asignadas y la presencia de rutas conectadas activas. Estas rutas permiten alcanzar las redes directamente conectadas; todavía no proporcionan comunicación entre las LAN remotas.
+
+![Direcciones y rutas conectadas de EMPRESA-R1](../capturas/fase2/01-direcciones-r1.png)
+
+*Figura 7: Direccionamiento y rutas conectadas de EMPRESA-R1.*
+
+![Direcciones y rutas conectadas de EMPRESA-R2](../capturas/fase2/02-direcciones-r2.png)
+
+*Figura 8: Direccionamiento y rutas conectadas de EMPRESA-R2.*
+
+![Direcciones y rutas conectadas de EMPRESA-R3](../capturas/fase2/03-direcciones-r3.png)
+
+*Figura 9: Direccionamiento y rutas conectadas de EMPRESA-R3.*
+
+### 2.5. Pruebas entre routers
+
+Se ejecutaron pings con dirección de origen explícita para comprobar cada enlace de datos.
+
+#### Desde R1
+
+```routeros
+/ping address=10.0.12.2 src-address=10.0.12.1 count=5
+/ping address=10.0.13.2 src-address=10.0.13.1 count=5
+```
+
+#### Desde R2
+
+```routeros
+/ping address=10.0.12.1 src-address=10.0.12.2 count=5
+/ping address=10.0.23.2 src-address=10.0.23.1 count=5
+```
+
+#### Desde R3
+
+```routeros
+/ping address=10.0.23.1 src-address=10.0.23.2 count=5
+/ping address=10.0.13.1 src-address=10.0.13.2 count=5
+```
+
+| Prueba | Resultado observado |
+|---|---|
+| R1 → R2 | 5 enviados, 5 recibidos |
+| R2 → R1 | 5 enviados, 5 recibidos |
+| R2 → R3 | 5 enviados, 5 recibidos |
+| R3 → R2 | 5 enviados, 5 recibidos |
+| R1 → R3 | 5 enviados, 5 recibidos |
+| R3 → R1 | 5 enviados, 5 recibidos |
+
+Los tres enlaces respondieron en ambos sentidos, sin pérdidas en estas pruebas.
+
+![Pruebas desde R1 hacia sus vecinos R2 y R3](../capturas/fase2/06-ping-vecinos-r1.png)
+
+*Figura 10: Verificación de los enlaces desde EMPRESA-R1.*
+
+![Pruebas desde R2 hacia sus vecinos R1 y R3](../capturas/fase2/07-ping-vecinos-r2.png)
+
+*Figura 11: Verificación de los enlaces desde EMPRESA-R2.*
+
+![Pruebas desde R3 hacia sus vecinos R2 y R1](../capturas/fase2/08-ping-vecinos-r3.png)
+
+*Figura 12: Verificación de los enlaces desde EMPRESA-R3.*
+
+### 2.6. Pruebas de los hosts
+
+En cada VPCS se consultó su configuración y se realizó un ping al gateway.
+
+#### EMPRESA-PC
+
+```text
+show ip
+ping 10.10.0.1
+```
+
+#### EMPRESA-SRV
+
+```text
+show ip
+ping 10.20.0.1
+```
+
+| Host | Dirección | Gateway | Resultado observado |
+|---|---|---|---|
+| EMPRESA-PC | 10.10.0.10/24 | 10.10.0.1 | 5 respuestas de 5 |
+| EMPRESA-SRV | 10.20.0.10/24 | 10.20.0.1 | 5 respuestas de 5 |
+
+![Configuración de EMPRESA-PC y ping a su gateway](../capturas/fase2/04-pc-gateway.png)
+
+*Figura 13: Conectividad de EMPRESA-PC con R1.*
+
+![Configuración de EMPRESA-SRV y ping a su gateway](../capturas/fase2/05-srv-gateway.png)
+
+*Figura 14: Conectividad de EMPRESA-SRV con R3.*
+
+### 2.7. Resultado
+
+Quedaron configuradas las direcciones internas y las loopbacks de los tres routers, junto con las direcciones y gateways de las dos VPCS.
+
+Se comprobó conectividad en ambos sentidos de los enlaces entre routers y desde cada host hacia su gateway.
+
+La comunicación entre LAN se verificará en F3, después de configurar OSPF.
 
 ## Fase 3 — Enrutamiento OSPF
 
