@@ -27,10 +27,14 @@ Ambos participan en la revisión del trabajo, el registro de avances y la defens
 |-------|-------------|-------|--------|
 | Prueba previa - 09/10/2026 | Se implementó una prueba de concepto para ver la viabilidad del proyecto con un servidor MCP en Python conectado por SSH a un router MikroTik en GNS3. Se comprobó su funcionamiento desde ChatGPT mediante un túnel. | Facundo | Realizada localmente, sin commit. |
 | Prueba previa - 09/10/2026 | Se cambió manualmente el nombre del router y se volvió a consultar mediante MCP para comprobar que la respuesta provenía del equipo en vivo. | Facundo | Realizada localmente, sin commit. |
-| 26/10/2026 | Se definió la modalidad B y el alcance de una demo de diagnóstico con EMPRESA y GEMELO en GNS3. | Facundo | Por completar |
-| 26/10/2026 | Se propuso distribuir las responsabilidades: Facundo desarrolla la demo y aporta evidencias, mientras que Irineo prepara la investigación, el artículo y el póster. | Ambos | Por completar |
-| 26/10/2026 | Se decidió excluir la sincronización automática del gemelo y el control de proyectos y nodos mediante la IA para reducir la complejidad. | Facundo | Por completar |
-| 27/10/2026 | Se configuró la identidad de Git y se agregaron en documento/fuentes.md las 10 fuentes iniciales con la cobertura de requisitos del artículo. | Irineo | Por completar |
+| 26/10/2026 | Se definió la modalidad B y el alcance de una demo de diagnóstico con EMPRESA y GEMELO en GNS3. | Facundo | e1015cd |
+| 26/10/2026 | Se propuso distribuir las responsabilidades: Facundo desarrolla la demo y aporta evidencias, mientras que Irineo prepara la investigación, el artículo y el póster. | Ambos | e1015cd  |
+| 26/10/2026 | Se decidió excluir la sincronización automática del gemelo y el control de proyectos y nodos mediante la IA para reducir la complejidad. | Facundo | e1015cd |
+| 27/10/2026 | Se configuró la identidad de Git y se agregaron en documento/fuentes.md las 10 fuentes iniciales con la cobertura de requisitos del artículo. | Irineo | d720509 |
+| 27/10/2026 | Se creó demo/DesarrolloDemo.md y se documentó la Fase 0: topología, cableado, direccionamiento previsto, decisiones de diseño, seguridad y criterios de validación. Se definieron las fases restantes de implementación. | Facundo | 360a5e4 |
+| 27/10/2026 | Se documentó la Fase 1 en demo/DesarrolloDemo.md y se incorporaron capturas de topología, identidades, IP estáticas, DHCP deshabilitado y acceso SSH. Se verificó que las direcciones de gestión quedan fuera del pool DHCP de VMnet1. | Facundo | bf59f3d |
+| 27/10/2026 | Se configuraron las LAN, los enlaces internos, las loopbacks y las VPCS de EMPRESA. Se verificaron los tres enlaces entre routers en ambos sentidos y el acceso de cada host a su gateway, sin pérdidas en las pruebas. Se documentó F2 y se incorporaron ocho capturas. | Facundo | 19820b3 |
+| 27/10/2026 | Se configuró OSPFv2 en área 0 con Router ID explícitos, interfaces pasivas y costos que favorecen R1–R3. Se verificaron dos vecinos FULL por router, rutas aprendidas y comunicación entre PC y SRV en ambos sentidos. Se documentó F3 y se incorporaron cinco capturas. | Facundo | 695761c |
 
 Las pruebas previas se registran retrospectivamente. Completar sus fechas y referencias a commits cuando se disponga de esos datos.
 
@@ -52,9 +56,15 @@ Las pruebas previas se registran retrospectivamente. Completar sus fechas y refe
 - [x] Completar el usuario de GitHub de Irineo.
 - [x] Confirmar aceptación del reparto de tareas entre ambos.
 - [ ] Verificar colaboradores del grupo y docentes en el repositorio.
-- [ ] Incorporar y revisar el README 
-- [ ] Construir los dos entornos de GNS3.
-- [ ] Configurar direccionamiento, OSPF, firewall y permisos diferenciados.
+- [x] Incorporar y revisar el README 
+- [x] Documentar el diseño de la demo y las fases de implementación.
+- [x] Documentar la Fase 1 e incorporar capturas de la configuración de gestión.
+- [x] Configurar el direccionamiento interno, las loopbacks y las VPCS de EMPRESA.
+- [x] Verificar y documentar F2 con sus capturas.
+- [x] Configurar OSPF y comprobar conectividad entre las LAN.
+- [x] Documentar F3 e incorporar sus capturas.
+- [ ] Configurar firewall y permisos diferenciados.
+- [ ] Preparar GEMELO y verificar su independencia y equivalencia con EMPRESA.
 - [ ] Implementar las herramientas MCP definitivas.
 - [ ] Preparar una falla reproducible de firewall.
 - [ ] Verificar diagnóstico, corrección en GEMELO y conservación de los bloqueos requeridos.
