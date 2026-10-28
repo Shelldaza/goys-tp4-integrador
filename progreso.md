@@ -35,6 +35,7 @@ Ambos participan en la revisión del trabajo, el registro de avances y la defens
 | 27/10/2026 | Se documentó la Fase 1 en demo/DesarrolloDemo.md y se incorporaron capturas de topología, identidades, IP estáticas, DHCP deshabilitado y acceso SSH. Se verificó que las direcciones de gestión quedan fuera del pool DHCP de VMnet1. | Facundo | bf59f3d |
 | 27/10/2026 | Se configuraron las LAN, los enlaces internos, las loopbacks y las VPCS de EMPRESA. Se verificaron los tres enlaces entre routers en ambos sentidos y el acceso de cada host a su gateway, sin pérdidas en las pruebas. Se documentó F2 y se incorporaron ocho capturas. | Facundo | 19820b3 |
 | 27/10/2026 | Se configuró OSPFv2 en área 0 con Router ID explícitos, interfaces pasivas y costos que favorecen R1–R3. Se verificaron dos vecinos FULL por router, rutas aprendidas y comunicación entre PC y SRV en ambos sentidos. Se documentó F3 y se incorporaron cinco capturas. | Facundo | 695761c |
+| 28/10/2026 | Se configuró y documentó la seguridad de EMPRESA: cuentas y permisos, restricciones de gestión, servicios e interfaces sin uso deshabilitados, filtrado IPv4, bloqueo de entrada y tránsito IPv6 y autenticación OSPF SHA256. Se verificaron tráfico permitido y bloqueado, rechazo de escritura, prueba OSPF con clave incorrecta y recuperación, y acceso al puerto SSH desde orígenes autorizado y no autorizado. Se incorporaron 18 capturas y se documentaron las limitaciones. | Facundo | 64592db |
 
 Las pruebas previas se registran retrospectivamente. Completar sus fechas y referencias a commits cuando se disponga de esos datos.
 
@@ -63,7 +64,9 @@ Las pruebas previas se registran retrospectivamente. Completar sus fechas y refe
 - [x] Verificar y documentar F2 con sus capturas.
 - [x] Configurar OSPF y comprobar conectividad entre las LAN.
 - [x] Documentar F3 e incorporar sus capturas.
-- [ ] Configurar firewall y permisos diferenciados.
+- [x] Configurar y documentar la seguridad de EMPRESA.
+- [x] Verificar permisos, filtrado y autenticación OSPF mediante pruebas positivas y negativas.
+- [ ] Aplicar y verificar los permisos definitivos de la integración: lectura en EMPRESA y modificaciones controladas en GEMELO.
 - [ ] Preparar GEMELO y verificar su independencia y equivalencia con EMPRESA.
 - [ ] Implementar las herramientas MCP definitivas.
 - [ ] Preparar una falla reproducible de firewall.
