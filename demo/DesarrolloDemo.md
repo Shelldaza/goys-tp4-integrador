@@ -603,7 +603,496 @@ La recuperación ante caída del enlace principal no se ensayó en esta fase. El
 
 ## Fase 4 — Seguridad
 
-Pendiente: configurar cuentas, restricciones de gestión y firewall. Comprobar accesos permitidos y bloqueados.
+### 4.1. Objetivo
+
+Restringir la administración, separar los permisos de consulta y configuración, autenticar OSPF y comprobar las comunicaciones permitidas y bloqueadas.
+
+El equipo Windows administrador utiliza `192.168.57.1`. Se verificó este origen antes de restringir los accesos SSH.
+
+Los comandos documentan la configuración aplicada. Las instrucciones `add` no deben repetirse sin comprobar las entradas existentes. 
+
+Los comandos muestran nombres de ejemplo en lugar de las contraseñas y claves reales. Para reproducirlos, deben reemplazarse localmente por valores propios.
+
+### 4.2. Decisiones de diseño y tecnologías
+
+Se utilizaron las funciones nativas de RouterOS:
+
+- **SSH:** acceso remoto a los routers con autenticación de usuario y verificación de clave de host.
+- **Usuarios y grupos:** separación entre administración y consulta.
+- **Firewall IPv4:** protección del propio router y control del tránsito.
+- **HMAC-SHA256:** autenticación de los mensajes OSPF.
+- **Contadores y consultas:** observación del filtrado, las vecindades y las rutas.
+
+Se consideraron estas alternativas:
+
+| Tecnología | Decisión |
+|---|---|
+| mTLS | No se implementó mTLS propio. El diseño utiliza SSH para acceder a los routers y Secure MCP Tunnel para conectar el servidor local con ChatGPT. No se despliega un servicio HTTPS propio que requiera autenticación mediante certificados mutuos. |
+| eBPF security | No se utilizan herramientas de seguridad basadas en eBPF porque la demo se implementa sobre MikroTik CHR y no incluye una plataforma Linux o Kubernetes administrada por el grupo para ese fin. El firewall nativo de RouterOS permite aplicar la política, reproducir el bloqueo y verificar la corrección mediante contadores y pruebas de conectividad, por lo que cubre el escenario definido. |
+
+La selección responde a la arquitectura del laboratorio. No implica equivalencia entre tecnologías ni una comparación experimental de seguridad o rendimiento.
+
+### 4.3. Usuarios y permisos
+
+Se configuraron estas cuentas en los tres routers:
+
+| Cuenta | Grupo | Uso | Origen SSH autorizado |
+|---|---|---|---|
+| netadmin | full | Administración | 192.168.57.1/32 |
+| mcp_ro | tp4-lectura | Consultas | 192.168.57.1/32 |
+| admin | full | Cuenta predeterminada deshabilitada | — |
+
+El grupo de consulta tiene únicamente los permisos de lectura y SSH:
+
+```routeros
+/user group add name=tp4-lectura policy=ssh,read
+```
+
+Se asignaron seis contraseñas distintas de 32 caracteres, una por
+cuenta y router. Las credenciales se almacenan localmente en `.env`
+y no se incluyen en las capturas ni en la documentación.
+
+Los comandos equivalentes de creación son:
+
+```routeros
+/user add name=netadmin group=full address=192.168.57.1/32 password="CLAVE_UNICA_ADMINISTRADOR"
+/user add name=mcp_ro group=tp4-lectura address=192.168.57.1/32 password="CLAVE_UNICA_LECTURA"
+```
+
+Después de comprobar nuevas conexiones con netadmin, se deshabilitó admin y se cerraron sus sesiones anteriores:
+
+```routeros
+/user disable [find where name="admin"]
+```
+
+Verificación:
+
+```routeros
+/user print
+/user group print detail where name="tp4-lectura"
+```
+
+La bandera `X` identifica a admin como deshabilitado. Los permisos precedidos por `!` no están habilitados.
+
+![Usuarios y permisos de EMPRESA-R1](../capturas/fase4/01-usuarios-r1.png)
+
+*Figura 20: Cuentas y grupo de consulta de EMPRESA-R1.*
+
+![Usuarios y permisos de EMPRESA-R2](../capturas/fase4/02-usuarios-r2.png)
+
+*Figura 21: Cuentas y grupo de consulta de EMPRESA-R2.*
+
+![Usuarios y permisos de EMPRESA-R3](../capturas/fase4/03-usuarios-r3.png)
+
+*Figura 22: Cuentas y grupo de consulta de EMPRESA-R3.*
+
+### 4.4. Servicios e interfaces
+
+#### Servicios de administración
+
+En los tres routers se deshabilitaron los servicios que no utiliza el laboratorio:
+
+```routeros
+/ip service disable [find where name="telnet"]
+/ip service disable [find where name="ftp"]
+/ip service disable [find where name="www"]
+/ip service disable [find where name="www-ssl"]
+/ip service disable [find where name="api"]
+/ip service disable [find where name="api-ssl"]
+/ip service disable [find where name="winbox"]
+```
+
+SSH permanece habilitado. Su acceso IPv4 se restringe mediante las cuentas y el firewall.
+
+También se deshabilitaron MAC Telnet, MAC WinBox, MAC Ping y el descubrimiento de vecinos:
+
+```routeros
+/tool mac-server set allowed-interface-list=none
+/tool mac-server mac-winbox set allowed-interface-list=none
+/tool mac-server ping set enabled=no
+/ip neighbor discovery-settings set discover-interface-list=none
+```
+
+Esto reduce mecanismos innecesarios de acceso y descubrimiento. La consola de GNS3 se conserva como recuperación local.
+
+![Servicios y mecanismos MAC de R1](../capturas/fase4/04-servicios-gestion.png)
+
+*Figura 23: Servicios de R1, representativos de la configuración aplicada a los tres routers.*
+
+#### Interfaces sin uso
+
+Se deshabilitaron los puertos Ethernet que no participan en el cableado:
+
+| Router | Interfaces conservadas | Interfaces deshabilitadas |
+|---|---|---|
+| R1 | ether1, ether2, ether3 y ether4 | ether5, ether6, ether7 y ether8 |
+| R2 | ether1, ether3 y ether4 | ether2, ether5, ether6, ether7 y ether8 |
+| R3 | ether1, ether2, ether3 y ether4 | ether5, ether6, ether7 y ether8 |
+
+La interfaz `lo` permanece habilitada en los tres routers.
+
+Comandos comunes:
+
+```routeros
+/interface ethernet disable [find where name="ether5"]
+/interface ethernet disable [find where name="ether6"]
+/interface ethernet disable [find where name="ether7"]
+/interface ethernet disable [find where name="ether8"]
+```
+
+Comando adicional en R2:
+
+```routeros
+/interface ethernet disable [find where name="ether2"]
+```
+
+Se evita así utilizar accidentalmente puertos ajenos al diseño. Las capturas de la sección 4.8 incluyen su verificación.
+
+### 4.5. Protección del propio router mediante IPv4
+
+La cadena `input` controla los paquetes destinados a cualquiera de las direcciones locales del router, independientemente de la interfaz por la que ingresen.
+
+#### Reglas iniciales comunes
+
+En los tres routers:
+
+```routeros
+/ip firewall filter add chain=input action=accept connection-state=established,related comment=TP4-IN-EST
+/ip firewall filter add chain=input action=drop connection-state=invalid comment=TP4-IN-INVALID
+/ip firewall filter add chain=input action=accept in-interface=ether1 src-address=192.168.57.1/32 protocol=tcp dst-port=22 comment=TP4-IN-SSH
+/ip firewall filter add chain=input action=accept in-interface=ether1 src-address=192.168.57.1/32 protocol=icmp comment=TP4-IN-MGMT-PING
+```
+
+Las nuevas conexiones SSH se autorizan únicamente desde el equipo administrador y por la interfaz de gestión.
+
+#### Permisos OSPF de EMPRESA-R1
+
+```routeros
+/ip firewall filter add chain=input action=accept in-interface=ether3 src-address=10.0.12.2/32 protocol=ospf comment=TP4-IN-OSPF3
+/ip firewall filter add chain=input action=accept in-interface=ether4 src-address=10.0.13.2/32 protocol=ospf comment=TP4-IN-OSPF4
+```
+
+#### Permisos OSPF de EMPRESA-R2
+
+```routeros
+/ip firewall filter add chain=input action=accept in-interface=ether3 src-address=10.0.12.1/32 protocol=ospf comment=TP4-IN-OSPF3
+/ip firewall filter add chain=input action=accept in-interface=ether4 src-address=10.0.23.2/32 protocol=ospf comment=TP4-IN-OSPF4
+```
+
+#### Permisos OSPF de EMPRESA-R3
+
+```routeros
+/ip firewall filter add chain=input action=accept in-interface=ether3 src-address=10.0.23.1/32 protocol=ospf comment=TP4-IN-OSPF3
+/ip firewall filter add chain=input action=accept in-interface=ether4 src-address=10.0.13.1/32 protocol=ospf comment=TP4-IN-OSPF4
+```
+
+#### Reglas finales comunes
+
+En los tres routers:
+
+```routeros
+/ip firewall filter add chain=input action=accept in-interface=!ether1 src-address=10.0.0.0/8 dst-address=!192.168.57.0/24 protocol=icmp comment=TP4-IN-DATA-PING
+/ip firewall filter add chain=input action=drop comment=TP4-IN-DROP
+```
+
+Se permite ICMP de diagnóstico desde las redes internas, excluyendo como destino la red de gestión. Los paquetes no autorizados por las reglas anteriores alcanzan el descarte final.
+
+Por ejemplo, un ping desde PC a la IP de gestión de R1 ingresa por ether2 y se procesa en input. La exclusión de destino impide que lo acepte TP4-IN-DATA-PING.
+
+El filtrado de OSPF por origen e interfaz se complementa con la autenticación de la sección 4.8.
+
+![Reglas input de EMPRESA-R1](../capturas/fase4/05-firewall-input-r1.png)
+
+*Figura 24: Protección IPv4 del propio router.*
+
+### 4.6. Tráfico IPv4 en tránsito
+
+En los tres routers se impide utilizar la interfaz de gestión como camino de tránsito:
+
+```routeros
+/ip firewall filter add chain=forward action=drop in-interface=ether1 comment=TP4-NO-MGMT-IN
+/ip firewall filter add chain=forward action=drop out-interface=ether1 comment=TP4-NO-MGMT-OUT
+```
+
+La política de datos del escenario se concentra en R1. Después de esas dos reglas se configuraron:
+
+```routeros
+/ip firewall filter add chain=forward action=accept connection-state=established,related comment=TP4-FWD-EST
+/ip firewall filter add chain=forward action=drop connection-state=invalid comment=TP4-FWD-INVALID
+/ip firewall filter add chain=forward action=accept src-address=10.10.0.10 dst-address=10.20.0.10 protocol=icmp comment=TP4-FWD-PERMITIDO
+/ip firewall filter add chain=forward action=drop comment=TP4-FWD-DROP
+```
+
+PC puede iniciar tráfico ICMP hacia SRV. Las respuestas se aceptan mediante seguimiento de conexiones. Los demás accesos nuevos que atraviesan R1 se descartan.
+
+Tanto el camino directo R1–R3 como la alternativa R1–R2–R3 atraviesan R1. R2 y R3 no tienen un descarte general del tránsito de datos.
+
+No se utiliza FastTrack para mantener observable el recorrido por las reglas y sus contadores.
+
+![Reglas forward de EMPRESA-R1](../capturas/fase4/06-firewall-forward-r1.png)
+
+*Figura 25: Política de tránsito aplicada en R1.*
+
+### 4.7. Tratamiento de IPv6
+
+La demostración utiliza únicamente IPv4. En los tres routers se bloqueó la entrada y el tránsito IPv6:
+
+```routeros
+/ipv6 firewall filter add chain=input action=drop comment=TP4-IPV6-IN-DROP
+/ipv6 firewall filter add chain=forward action=drop comment=TP4-IPV6-FWD-DROP
+```
+
+IPv6 permanece habilitado en el sistema. Estas reglas bloquean los paquetes destinados al router y los que intentan atravesarlo; no deshabilitan la pila ni filtran su tráfico de salida.
+
+Se verificó la presencia de ambas reglas en cada equipo:
+
+```routeros
+/ipv6 firewall filter export terse
+```
+
+![Reglas IPv6 de los tres routers](../capturas/fase4/11-bloqueo-ipv6.png)
+
+*Figura 26: Configuración del descarte de entrada y tránsito IPv6.*
+
+### 4.8. Autenticación OSPF
+
+Se incorporó HMAC-SHA256 en los tres enlaces entre routers, con `auth-id=1`.
+
+| Enlace | Extremo A | Extremo B | Clave |
+|---|---|---|---|
+| R1–R2 | R1 ether3 | R2 ether3 | Exclusiva del enlace |
+| R2–R3 | R2 ether4 | R3 ether3 | Exclusiva del enlace |
+| R1–R3 | R1 ether4 | R3 ether4 | Exclusiva del enlace |
+
+Se asignaron tres claves distintas de 32 caracteres hexadecimales,
+una por enlace. Ambos extremos de cada enlace comparten su clave
+correspondiente. Las claves se almacenan localmente en `.env`
+y no se incluyen en la documentación ni en las capturas.
+
+Los comandos equivalentes utilizan marcadores:
+
+#### EMPRESA-R1
+
+```routeros
+/routing ospf interface-template set [find where interfaces="ether3"] auth=sha256 auth-id=1 auth-key="CLAVE_ENLACE_R1_R2"
+/routing ospf interface-template set [find where interfaces="ether4"] auth=sha256 auth-id=1 auth-key="CLAVE_ENLACE_R1_R3"
+```
+
+#### EMPRESA-R2
+
+```routeros
+/routing ospf interface-template set [find where interfaces="ether3"] auth=sha256 auth-id=1 auth-key="CLAVE_ENLACE_R1_R2"
+/routing ospf interface-template set [find where interfaces="ether4"] auth=sha256 auth-id=1 auth-key="CLAVE_ENLACE_R2_R3"
+```
+
+#### EMPRESA-R3
+
+```routeros
+/routing ospf interface-template set [find where interfaces="ether3"] auth=sha256 auth-id=1 auth-key="CLAVE_ENLACE_R2_R3"
+/routing ospf interface-template set [find where interfaces="ether4"] auth=sha256 auth-id=1 auth-key="CLAVE_ENLACE_R1_R3"
+```
+
+La autenticación verifica los mensajes mediante una clave compartida. No cifra los anuncios ni sustituye el firewall.
+
+Las LAN y loopbacks permanecen pasivas. La interfaz de gestión sigue excluida de OSPF.
+
+Se verificaron las interfaces, el método de autenticación y los vecinos sin mostrar claves:
+
+```routeros
+/interface ethernet print without-paging
+/routing ospf interface-template print without-paging proplist=interfaces,auth,auth-id,passive
+/routing ospf neighbor print detail without-paging
+```
+
+Cada router mantuvo dos vecinos Full. Las rutas a las LAN remotas permanecieron activas y el camino principal continuó siendo R1–R3.
+
+![Interfaces y OSPF de EMPRESA-R1](../capturas/fase4/12-hardening-r1.png)
+
+*Figura 27: Interfaces deshabilitadas y autenticación OSPF de R1.*
+
+![Interfaces y OSPF de EMPRESA-R2](../capturas/fase4/13-hardening-r2.png)
+
+*Figura 28: Interfaces deshabilitadas y autenticación OSPF de R2.*
+
+![Interfaces y OSPF de EMPRESA-R3](../capturas/fase4/14-hardening-r3.png)
+
+*Figura 29: Interfaces deshabilitadas y autenticación OSPF de R3.*
+
+### 4.9. Validación de los controles
+
+#### 4.9.1. Tráfico permitido y bloqueado
+
+Desde EMPRESA-PC:
+
+```text
+ping 10.20.0.10
+ping 10.255.0.3
+ping 10.10.0.1
+ping 192.168.57.10
+```
+
+| Destino | Resultado observado |
+|---|---|
+| SRV — 10.20.0.10 | 5 respuestas de 5 |
+| Loopback de R3 — 10.255.0.3 | 5 timeouts |
+| Gateway — 10.10.0.1 | 5 respuestas de 5 |
+| Gestión de R1 — 192.168.57.10 | 5 timeouts |
+
+![Pruebas desde EMPRESA-PC](../capturas/fase4/07-pruebas-pc.png)
+
+*Figura 30: Comprobación de destinos permitidos y bloqueados.*
+
+En R1 se consultaron los contadores:
+
+```routeros
+/ip firewall filter print stats without-paging
+```
+
+TP4-FWD-PERMITIDO, TP4-FWD-DROP y TP4-IN-DATA-PING registraron 20 paquetes acumulados cada una, frente a los 15 de la captura anterior. El incremento es coherente con cinco intentos hacia SRV, la loopback protegida y el gateway, respectivamente.
+
+TP4-IN-DROP registró 183 paquetes acumulados. Incluye otros tráficos descartados y no permite atribuir su totalidad al ping hacia gestión.
+
+Los contadores son acumulativos; sus valores pueden aumentar al repetir las pruebas.
+
+![Contadores del firewall de R1](../capturas/fase4/08-contadores-r1.png)
+
+*Figura 31: Contadores acumulados de aceptación y descarte.*
+
+#### 4.9.2. Permisos de consulta
+
+Se comprobó en los tres routers que mcp_ro puede leer la identidad y no puede modificarla.
+
+Ejemplo en R1:
+
+```routeros
+/system identity print
+/system identity set name=EMPRESA-R1
+```
+
+La escritura fue rechazada con `not enough permissions (9)`. Se utilizó el nombre existente para evitar un cambio efectivo si la operación se aceptaba inesperadamente.
+
+![Lectura y escritura con mcp_ro](../capturas/fase4/09-permisos-lectura.png)
+
+*Figura 32: Lectura permitida y escritura rechazada en R1.*
+
+#### 4.9.3. Continuidad de OSPF después del firewall
+
+Se consultaron las vecindades:
+
+```routeros
+/routing ospf neighbor print detail without-paging
+```
+
+Después de aplicar el firewall se conservaron los vecinos Full. Las capturas de la sección 4.8 muestran también la verificación posterior a la autenticación.
+
+![Vecinos de R1 después del firewall](../capturas/fase4/10-ospf-despues-firewall.png)
+
+*Figura 33: Continuidad de OSPF después del filtrado.*
+
+#### 4.9.4. Prueba negativa de autenticación OSPF
+
+Se cambió temporalmente la clave de la plantilla ether3 de R1 por una clave de prueba distinta de la configurada en R2. No se modificaron las interfaces, los costos ni el firewall.
+
+El ensayo se realizó sobre R1–R2 para conservar el enlace principal R1–R3. La clave original se recuperó desde `.env` y se restauró al finalizar.
+
+Durante la prueba se consultaron los vecinos de ambos routers:
+
+```routeros
+/routing ospf neighbor print detail without-paging
+```
+
+| Estado | R1 | R2 |
+|---|---|---|
+| Claves diferentes | Solo R3 permanece Full | Solo R3 permanece Full |
+| Clave correcta restaurada | R2 y R3 aparecen Full | R1 y R3 aparecen Full |
+
+La vecindad R1–R2 desapareció de ambos listados durante la discrepancia de claves. Las vecindades con R3 permanecieron Full.
+
+![Vecindades con clave incorrecta](../capturas/fase4/15-ospf-clave-incorrecta-r1-r2.png)
+
+*Figura 34: Pérdida de la vecindad R1–R2 al introducir una clave incorrecta.*
+
+Después de restaurar la clave correcta, ambos routers recuperaron sus dos vecinos Full. Las capturas muestran una antigüedad menor para la vecindad recuperada que para las conexiones con R3.
+
+![Vecindades recuperadas](../capturas/fase4/16-ospf-recuperado.png)
+
+*Figura 35: Recuperación de R1–R2 después de restaurar la clave.*
+
+El ensayo comprobó la pérdida y recuperación de una vecindad al modificar únicamente la clave de un extremo. No se midió el tiempo exacto de detección ni se capturaron paquetes o mensajes específicos de rechazo.
+
+#### 4.9.5. Acceso al puerto SSH desde distintos orígenes
+
+Desde EMPRESA-R2 se intentó conectar al puerto SSH de R1:
+
+```routeros
+/system telnet address=192.168.57.10 port=22
+```
+
+El cliente Telnet se utilizó como sonda TCP al puerto 22. No se habilitó el servicio Telnet ni se enviaron credenciales.
+
+El intento desde R2, con origen `192.168.57.11`, no estableció conexión. Este origen no está autorizado por la regla de acceso SSH de R1.
+
+![Intento al puerto SSH desde R2](../capturas/fase4/17-ssh-origen-no-autorizado.png)
+
+*Figura 36: Intento de conexión al puerto SSH desde un origen no autorizado.*
+
+Como comprobación positiva, desde Windows se inició una sesión:
+
+```powershell
+ssh netadmin@192.168.57.10
+```
+
+Dentro de ella se consultó:
+
+```routeros
+/system identity print
+```
+
+La conexión desde `192.168.57.1` permitió autenticarse y consultar la identidad EMPRESA-R1.
+
+![Acceso SSH desde Windows](../capturas/fase4/18-ssh-origen-autorizado.png)
+
+*Figura 37: Acceso SSH desde el equipo administrador autorizado.*
+
+Esta comparación verifica el bloqueo de conexión desde el origen ensayado y el acceso desde Windows. No constituye una prueba de contraseñas incorrectas ni de todos los posibles orígenes de red.
+
+### 4.10. Supuestos y limitaciones
+
+El laboratorio prepara un escenario de diagnóstico y corrección de una regla de firewall en un entorno separado. Se consideran confiables el equipo administrador, el hipervisor y los routers; no se simula el compromiso de un dispositivo.
+
+| Aspecto | Alcance y límite |
+|---|---|
+| Filtrado de datos | La política se aplica en R1, por donde pasan ambos caminos PC–SRV. No garantiza la misma restricción para tráfico de otros segmentos que no atraviese R1. |
+| Gestión | Se separa mediante interfaz y filtrado, sin VRF independiente. Su protección depende de la configuración de acceso y firewall. |
+| Suplantación | No se implementaron controles específicos contra falsificación de direcciones de origen. La restricción por IP no sustituye la autenticación. |
+| Disponibilidad | No se realizaron pruebas de saturación ni se configuraron límites específicos de ICMP. |
+| Recuperación administrativa | Si Windows no está disponible, se conserva la consola de GNS3 como acceso local. |
+| IPv6 | Se verificaron las reglas de entrada y tránsito, sin una prueba de tráfico. La pila permanece habilitada. |
+| Pruebas negativas | OSPF se ensayó en R1–R2 y el puerto SSH se probó desde R2 hacia R1. No se repitieron todas las combinaciones de equipos y orígenes. |
+
+Las pruebas respaldan los comportamientos observados; no constituyen una auditoría completa ni acreditan resistencia general frente a ataques.
+
+Antes de trasladar el diseño a producción sería necesario revisar las fronteras de confianza y evaluar filtrado adicional, validación de orígenes, aislamiento de gestión y controles de disponibilidad.
+
+### 4.11. Resultado y continuidad
+
+Quedaron configuradas las cuentas y restricciones de administración, los servicios mínimos, las interfaces utilizadas, el firewall IPv4, el descarte de entrada y tránsito IPv6 y la autenticación OSPF.
+
+Se comprobó:
+
+- Lectura permitida y escritura rechazada con mcp_ro.
+- Conectividad de PC con SRV y su gateway.
+- Bloqueo desde PC hacia la loopback protegida y la gestión de R1.
+- Conservación de vecinos y rutas OSPF después del filtrado.
+- Pérdida de la vecindad R1–R2 con una clave incorrecta y recuperación al restaurarla.
+- Bloqueo del puerto SSH desde R2 y acceso administrativo desde Windows.
+
+La cuenta netadmin se reserva para administración. En F6, la integración con EMPRESA utilizará exclusivamente mcp_ro; las modificaciones de la demostración se permitirán únicamente en GEMELO.
+
+Los requisitos para reproducir el acceso de gestión en otra computadora se documentan en [la guía de la demo](README.md).
+
+La falla intencional de firewall prevista para F7 todavía no se introdujo.
+
 
 ## Fase 5 — Preparación del gemelo
 
