@@ -1,5 +1,6 @@
-"""Conexiones SSH de lectura a equipos del inventario."""
+"""Conexiones SSH verificadas; escritura exclusiva en GEMELO."""
 
+import argparse
 import json
 import logging
 from contextlib import contextmanager
@@ -46,7 +47,7 @@ def _consultar_texto(cliente: paramiko.SSHClient, comando: str) -> str:
         if estado != 0 or error or any(
             marca in texto.lower() for marca in marcas_error
         ):
-            raise ErrorSSH("RouterOS rechazo la consulta.")
+            raise ErrorSSH("RouterOS rechazo el comando.")
 
         return texto
     finally:
@@ -54,9 +55,22 @@ def _consultar_texto(cliente: paramiko.SSHClient, comando: str) -> str:
 
 
 @contextmanager
-def conectar_lectura(nombre: str, credenciales: dict[str, str]):
+def _conectar(
+    nombre: str,
+    credenciales: dict[str, str],
+    *,
+    escritura: bool,
+):
     equipo = obtener_equipo(nombre)
-    credencial = seleccionar_credencial(equipo, credenciales)
+
+    if escritura and equipo.entorno != "GEMELO":
+        raise ValueError("La conexion de escritura solo admite GEMELO.")
+
+    credencial = seleccionar_credencial(
+        equipo,
+        credenciales,
+        escritura=escritura,
+    )
 
     if not KNOWN_HOSTS.is_file():
         raise ErrorSSH(
@@ -84,7 +98,8 @@ def conectar_lectura(nombre: str, credenciales: dict[str, str]):
         )
 
         identidad = _consultar_texto(
-            cliente, ":put [/system identity get name]"
+            cliente,
+            ":put [/system identity get name]",
         )
         mac = _consultar_texto(
             cliente,
@@ -106,8 +121,9 @@ def conectar_lectura(nombre: str, credenciales: dict[str, str]):
         ) from None
 
     except paramiko.AuthenticationException:
+        cuenta = "administrativa" if escritura else "de lectura"
         raise ErrorSSH(
-            "Fallo la autenticacion de la cuenta de lectura."
+            f"Fallo la autenticacion de la cuenta {cuenta}."
         ) from None
 
     except (paramiko.SSHException, OSError, EOFError):
@@ -119,17 +135,74 @@ def conectar_lectura(nombre: str, credenciales: dict[str, str]):
         cliente.close()
 
 
-def verificar_conexiones() -> bool:
-    credenciales = cargar_credenciales()
+@contextmanager
+def conectar_lectura(nombre: str, credenciales: dict[str, str]):
+    with _conectar(nombre, credenciales, escritura=False) as cliente:
+        yield cliente
+
+
+@contextmanager
+def conectar_escritura(nombre: str, credenciales: dict[str, str]):
+    with _conectar(nombre, credenciales, escritura=True) as cliente:
+        yield cliente
+
+
+def verificar_bloqueo_empresa() -> bool:
+    """Comprueba el rechazo local sin credenciales ni conexion de red."""
     correcto = True
 
     for nombre, equipo in INVENTARIO.items():
+        if equipo.entorno != "EMPRESA":
+            continue
+
         try:
-            with conectar_lectura(nombre, credenciales):
+            with conectar_escritura(nombre, {}):
+                pass
+        except ValueError as error:
+            rechazado = (
+                str(error)
+                == "La conexion de escritura solo admite GEMELO."
+            )
+        else:
+            rechazado = False
+
+        if not rechazado:
+            correcto = False
+
+        print(
+            json.dumps(
+                {
+                    "equipo": nombre,
+                    "comprobacion": "rechazo_local_de_escritura",
+                    "estado": "verificado" if rechazado else "error",
+                },
+                ensure_ascii=False,
+            ),
+            flush=True,
+        )
+
+    return correcto
+
+
+def verificar_conexiones(*, escritura: bool = False) -> bool:
+    credenciales = cargar_credenciales()
+    correcto = True
+
+    if escritura:
+        correcto = verificar_bloqueo_empresa()
+
+    conectar = conectar_escritura if escritura else conectar_lectura
+
+    for nombre, equipo in INVENTARIO.items():
+        if escritura and equipo.entorno != "GEMELO":
+            continue
+
+        try:
+            with conectar(nombre, credenciales):
                 resultado = {
                     "equipo": nombre,
                     "ip": equipo.ip,
-                    "usuario": "mcp_ro",
+                    "usuario": "netadmin" if escritura else "mcp_ro",
                     "estado": "verificado",
                     "comprobaciones": [
                         "clave_host",
@@ -153,8 +226,18 @@ def verificar_conexiones() -> bool:
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Verifica conexiones SSH sin modificar configuraciones."
+    )
+    parser.add_argument(
+        "--escritura",
+        action="store_true",
+        help="Verifica netadmin en GEMELO y el rechazo local de EMPRESA.",
+    )
+    argumentos = parser.parse_args()
+
     try:
-        exito = verificar_conexiones()
+        exito = verificar_conexiones(escritura=argumentos.escritura)
     except ValueError as error:
         raise SystemExit(str(error)) from None
 
