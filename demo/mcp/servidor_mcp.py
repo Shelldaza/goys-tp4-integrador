@@ -103,6 +103,15 @@ No inventes resultados ni afirmes haber realizado pruebas que no
 ejecutaste. No incluyas contraseñas, claves u otros secretos.
 Presenta el informe en el chat; no crees archivos salvo solicitud
 del usuario. Respeta el formato y la extensión que este indique.
+
+Presenta el informe en Markdown renderizado dentro del chat, separado
+de los mensajes de avance mediante una línea horizontal y el título
+"### Informe de intervención".
+
+Utiliza párrafos breves y negritas para destacar la causa, las acciones
+y el resultado. Usa listas solo cuando faciliten la lectura.
+No encierres el informe en un bloque de código ni crees un archivo.
+Mantén el contenido conciso, profesional y basado en evidencias.
 """
 
 mcp = FastMCP(
