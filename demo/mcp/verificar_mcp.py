@@ -1,4 +1,4 @@
-"""Verificacion local del protocolo MCP y sus herramientas de lectura."""
+"""Verifica las herramientas generales sin modificar configuraciones."""
 
 import asyncio
 import json
@@ -8,13 +8,19 @@ from pathlib import Path
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
+from operaciones_router import ejecutar_router
+
 
 BASE = Path(__file__).resolve().parent
 
 
+def exigir(condicion: bool, mensaje: str) -> None:
+    if not condicion:
+        raise RuntimeError(mensaje)
+
+
 def obtener_datos(resultado) -> dict:
-    if resultado.isError:
-        raise RuntimeError("La herramienta devolvio un error.")
+    exigir(not resultado.isError, "La herramienta devolvio un error.")
 
     for bloque in resultado.content:
         if bloque.type == "text":
@@ -26,6 +32,25 @@ def obtener_datos(resultado) -> dict:
 
 
 async def verificar() -> None:
+    for equipo in ("EMPRESA-R1", "EMPRESA-R2", "EMPRESA-R3"):
+        try:
+            ejecutar_router(
+                equipo,
+                ":put 1",
+                {},
+                administrativo=True,
+            )
+        except ValueError as error:
+            exigir(
+                str(error)
+                == "La ejecucion administrativa solo esta permitida en GEMELO.",
+                "El rechazo administrativo tuvo una causa inesperada.",
+            )
+        else:
+            raise RuntimeError("Se admitio administracion de EMPRESA.")
+
+    print("OK: EMPRESA rechazada en la capa administrativa.", flush=True)
+
     parametros = StdioServerParameters(
         command=sys.executable,
         args=[str(BASE / "servidor_mcp.py")],
@@ -37,124 +62,106 @@ async def verificar() -> None:
             print("OK: sesion MCP inicializada.", flush=True)
 
             listado = await sesion.list_tools()
-            nombres = {herramienta.name for herramienta in listado.tools}
+            herramientas = {
+                herramienta.name: herramienta
+                for herramienta in listado.tools
+            }
 
-            if nombres != {
-                "listar_routers",
-                "consultar_router",
-                "comparar_firewall_escenario",
-            }:
-                raise RuntimeError("El conjunto de herramientas no coincide.")
-
-            print(
-                "OK: solo se publican las tres herramientas de lectura.",
-                flush=True,
+            exigir(
+                set(herramientas) == {
+                    "listar_routers",
+                    "consultar_router",
+                    "ejecutar_comando_gemelo",
+                },
+                "El conjunto de herramientas no coincide.",
             )
 
-            inventario = await sesion.call_tool("listar_routers", {})
-            if inventario.isError:
-                raise RuntimeError("Fallo la consulta del inventario.")
+            for nombre in ("listar_routers", "consultar_router"):
+                anotaciones = herramientas[nombre].annotations
+                exigir(
+                    anotaciones is not None
+                    and anotaciones.readOnlyHint is True,
+                    f"Anotaciones incorrectas para {nombre}.",
+                )
 
-            print("OK: listar_routers responde mediante MCP.", flush=True)
+            administrativa = herramientas["ejecutar_comando_gemelo"]
+            exigir(
+                administrativa.annotations is not None
+                and administrativa.annotations.readOnlyHint is False
+                and administrativa.annotations.destructiveHint is True,
+                "La herramienta administrativa no esta identificada como tal.",
+            )
+
+            equipos = (
+                administrativa.inputSchema["properties"]["equipo"]["enum"]
+            )
+            exigir(
+                set(equipos) == {
+                    "GEMELO-R1", "GEMELO-R2", "GEMELO-R3",
+                },
+                "La herramienta administrativa admite equipos inesperados.",
+            )
+            print("OK: herramientas y separacion de entornos.", flush=True)
+
+            inventario = await sesion.call_tool("listar_routers", {})
+            exigir(not inventario.isError, "Fallo listar_routers.")
+            print("OK: inventario consultado.", flush=True)
 
             for equipo in ("EMPRESA-R1", "GEMELO-R1"):
                 resultado = await sesion.call_tool(
                     "consultar_router",
-                    {"equipo": equipo, "consulta": "identidad"},
+                    {
+                        "equipo": equipo,
+                        "comando": ":put [/system identity get name]",
+                    },
                 )
                 datos = obtener_datos(resultado)
-
-                if (
-                    datos.get("estado") != "leido"
-                    or datos.get("equipo") != equipo
-                    or datos.get("salida", "").strip() != f"name: {equipo}"
-                ):
-                    raise RuntimeError(
-                        f"Respuesta de identidad inesperada para {equipo}."
-                    )
-
-                print(
-                    f"OK: identidad de {equipo} consultada mediante MCP.",
-                    flush=True,
+                exigir(
+                    datos.get("estado") == "completado"
+                    and datos.get("salida") == equipo
+                    and datos.get("usuario") == "mcp_ro",
+                    f"Consulta general incorrecta para {equipo}.",
                 )
+                print(f"OK: consulta general en {equipo}.", flush=True)
 
             resultado = await sesion.call_tool(
-                "comparar_firewall_escenario",
-                {},
+                "ejecutar_comando_gemelo",
+                {
+                    "equipo": "GEMELO-R1",
+                    "comando": ":put [/system identity get name]",
+                },
             )
-            comparacion = obtener_datos(resultado)
+            datos = obtener_datos(resultado)
+            exigir(
+                datos.get("estado") == "completado"
+                and datos.get("salida") == "GEMELO-R1"
+                and datos.get("usuario") == "netadmin",
+                "Fallo la ejecucion mediante netadmin.",
+            )
+            print("OK: comando general con netadmin en GEMELO.", flush=True)
 
-            if comparacion.get("estado") not in {
-                "equivalente_en_alcance",
-                "diferencias",
-            }:
-                raise RuntimeError(
-                    "La comparacion devolvio un estado inesperado."
+            for equipo in ("EMPRESA-R1", "FUERA-DEL-INVENTARIO"):
+                resultado = await sesion.call_tool(
+                    "ejecutar_comando_gemelo",
+                    {"equipo": equipo, "comando": ":put 1"},
+                )
+                exigir(
+                    resultado.isError,
+                    "MCP acepto un destino administrativo no permitido.",
                 )
 
-            if comparacion.get("modificaciones_aplicadas") is not False:
-                raise RuntimeError(
-                    "La comparacion no informa ausencia de modificaciones."
-                )
+            print("OK: destinos administrativos no permitidos rechazados.",
+                  flush=True)
 
-            if (
-                not isinstance(comparacion.get("orden_empresa"), list)
-                or not isinstance(comparacion.get("orden_gemelo"), list)
-                or not isinstance(comparacion.get("orden_coincide"), bool)
-                or not isinstance(comparacion.get("diferencias"), list)
-            ):
-                raise RuntimeError(
-                    "La estructura de la comparacion es inesperada."
-                )
-
-            equivalente = (
-                comparacion["orden_coincide"]
-                and not comparacion["diferencias"]
-            )
-            if (
-                comparacion["estado"] == "equivalente_en_alcance"
-            ) != equivalente:
-                raise RuntimeError(
-                    "El estado de la comparacion contradice sus resultados."
-                )
-
-            print(
-                "OK: comparacion de firewall consultada mediante MCP "
-                f"({comparacion['estado']}).",
-                flush=True,
-            )
-            print(
-                "OK: la comparacion informa que no aplico modificaciones.",
-                flush=True,
-            )
-
-            rechazado = await sesion.call_tool(
-                "consultar_router",
-                {"equipo": "FUERA-DEL-INVENTARIO", "consulta": "identidad"},
-            )
-            if not rechazado.isError:
-                raise RuntimeError("Se acepto un equipo no permitido.")
-
-            print("OK: equipo fuera del inventario rechazado.", flush=True)
-
-            rechazado = await sesion.call_tool(
-                "consultar_router",
-                {"equipo": "GEMELO-R1", "consulta": "comando_libre"},
-            )
-            if not rechazado.isError:
-                raise RuntimeError("Se acepto una consulta no permitida.")
-
-            print("OK: consulta fuera de la lista rechazada.", flush=True)
-
-    print("Verificacion MCP completada. No se modificaron routers.")
+    print("Verificacion completada. No se modificaron configuraciones.")
 
 
 if __name__ == "__main__":
     try:
-        asyncio.run(asyncio.wait_for(verificar(), timeout=120))
+        asyncio.run(asyncio.wait_for(verificar(), timeout=180))
     except Exception as error:
         print(
-            f"Verificacion incompleta: {type(error).__name__}.",
+            f"Verificacion incompleta: {type(error).__name__}: {error}",
             file=sys.stderr,
         )
         raise SystemExit(1) from None
