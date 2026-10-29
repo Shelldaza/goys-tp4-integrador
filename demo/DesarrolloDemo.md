@@ -1601,7 +1601,113 @@ Las pruebas con VPCS acreditan conectividad y comportamiento de filtrado dentro 
 
 ## Fase 7 — Escenario de falla y validación
 
-Pendiente: introducir la falla en ambos entornos, diagnosticarla y probar la corrección únicamente en GEMELO.
+### 7.1. Objetivo
+
+Evaluar si la IA puede investigar un problema de conectividad en EMPRESA, reproducirlo en GEMELO y validar allí una corrección mediante las herramientas generales del MCP.
+
+La falla no está codificada en las herramientas. La IA debe seleccionar consultas, interpretar evidencias y decidir qué modificación realizar.
+
+### 7.2. Introducción de la falla en EMPRESA
+
+Se agregó manualmente en **EMPRESA-R1** una regla que descarta el tráfico ICMP desde PC (`10.10.0.10`) hacia SRV (`10.20.0.10`):
+
+```routeros
+/ip firewall filter add chain=forward action=drop protocol=icmp src-address=10.10.0.10 dst-address=10.20.0.10 comment="TP4-FWD-PRUEBA" place-before=[find where chain="forward" and comment="TP4-FWD-EST"]
+```
+
+La regla se ubicó antes de la aceptación de conexiones establecidas y del permiso específico PC → SRV. De esta manera, también bloquea los pings que ya tengan seguimiento de conexión.
+
+La falla no modifica las direcciones, las vecindades OSPF ni el acceso SSH de gestión. Esto permite investigar una interrupción del tráfico de datos mientras el enrutamiento permanece operativo.
+
+### 7.3. Actualización de GEMELO
+
+Se solicitó a la IA actualizar GEMELO a partir de la configuración de EMPRESA, conservando las diferencias intencionales de gestión, identidades y credenciales.
+
+Mediante consultas a EMPRESA y comandos administrativos en GEMELO, se reprodujo la regla de bloqueo en GEMELO-R1. Se utilizaron herramientas generales, sin una función específica para copiar la falla.
+
+La actualización y la corrección se trataron como operaciones distintas: primero se reprodujo el estado defectuoso y después se investigó su solución.
+
+En ensayos posteriores, cuando el bloqueo ya estaba presente en GEMELO, no fue necesario volver a agregar la regla.
+
+### 7.4. Diagnóstico mediante MCP
+
+Se planteó el síntoma de forma general: la PC no podía comunicarse con el servidor.
+
+La IA consultó los routers y encontró:
+
+- Vecindades OSPF en estado `Full`.
+- Rutas activas hacia las redes involucradas.
+- Una regla de descarte en R1 que coincidía con el origen, destino y protocolo de la prueba, ubicada antes del permiso correspondiente.
+
+La existencia de rutas y vecinos activos no descarta por sí sola todos los problemas de red. La atribución del bloqueo al firewall se sustentó además mediante una prueba desde GEMELO-PC y la comparación del contador de la regla antes y después.
+
+En uno de los ensayos se observaron **cinco pings sin respuesta y un incremento de cinco paquetes en el contador de `TP4-FWD-PRUEBA`**. Esta correspondencia aportó evidencia de que el tráfico de prueba estaba siendo descartado por esa regla.
+
+### 7.5. Corrección aplicada exclusivamente en GEMELO
+
+La IA deshabilitó la regla de bloqueo en **GEMELO-R1**. La operación puede reproducirse mediante:
+
+```routeros
+/ip firewall filter disable [find where chain="forward" and comment="TP4-FWD-PRUEBA"]
+```
+
+La deshabilitación permite comprobar la causa conservando la regla para una eventual reversión. No se agregó un permiso general ni se retiró la política de descarte del escenario.
+
+El estado de la regla puede consultarse con:
+
+```routeros
+/ip firewall filter print detail where comment="TP4-FWD-PRUEBA"
+```
+
+La bandera `X` indica que está deshabilitada.
+
+### 7.6. Resultados y alcance de la validación
+
+Desde **GEMELO-PC** se repitió la prueba:
+
+```text
+ping 10.20.0.10
+```
+
+| Comprobación | Resultado observado |
+|---|---|
+| PC → SRV con la regla activa en GEMELO | Cinco pings sin respuesta |
+| Contador de la regla durante esa prueba | Incremento de cinco paquetes |
+| PC → SRV después de deshabilitar la regla | Cinco respuestas de cinco |
+| Modificaciones realizadas mediante MCP en EMPRESA | Ninguna |
+| Corrección en EMPRESA | Pendiente de aplicación por su administrador |
+
+Los ensayos se repitieron durante el ajuste de las instrucciones del servidor. Los valores de la tabla corresponden a una ejecución observada, no a una suma de pruebas.
+
+La recuperación de respuestas confirma la corrección del bloqueo ICMP ensayado. No acredita el funcionamiento de servicios TCP o UDP.
+
+Queda pendiente registrar explícitamente, después de la corrección, la conservación del bloqueo desde GEMELO-PC hacia la loopback protegida:
+
+```text
+ping 10.255.0.3
+```
+
+El resultado esperado es ausencia de respuestas. Esta comprobación debe interpretarse junto con la configuración y los contadores correspondientes; un timeout aislado no demuestra por sí solo la causa del bloqueo.
+
+### 7.7. Recomendación y reversión
+
+La IA presentó un informe en el chat con la causa identificada, los resultados obtenidos en GEMELO y la recomendación de deshabilitar la misma regla en EMPRESA-R1.
+
+La aplicación en EMPRESA queda a cargo de su administrador. Después del cambio debe repetir la prueba PC → SRV y verificar la conservación de las restricciones relacionadas.
+
+Para reactivar la falla en **GEMELO-R1** durante otro ensayo:
+
+```routeros
+/ip firewall filter enable [find where chain="forward" and comment="TP4-FWD-PRUEBA"]
+```
+
+Para retirar definitivamente la regla de prueba, ejecutar en el router del entorno que se desee limpiar:
+
+```routeros
+/ip firewall filter remove [find where chain="forward" and comment="TP4-FWD-PRUEBA"]
+```
+
+Estas operaciones de preparación y limpieza se distinguen de las acciones realizadas durante el diagnóstico. La integración mantiene EMPRESA en modo de lectura y concentra la experimentación administrativa en GEMELO.
 
 ## Fase 8 — Ensayos y respaldo
 
