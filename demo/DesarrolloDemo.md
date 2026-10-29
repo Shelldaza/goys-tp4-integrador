@@ -68,6 +68,10 @@ Se eligen IP estáticas para mantener accesos conocidos y evitar depender de con
 
 Se deshabilitará únicamente el cliente DHCP de estas interfaces para evitar una segunda dirección dinámica innecesaria. Esto no impide usar DHCP en otras redes.
 
+Las interfaces de gestión tendrán direcciones MAC únicas entre ambos
+proyectos, ya que comparten la red Host-only. Al clonar los routers
+se comprobará este requisito, además de asignar IP de gestión distintas.
+
 #### Redes internas
 
 | Segmento | Extremo A | Extremo B |
@@ -1096,7 +1100,354 @@ La falla intencional de firewall prevista para F7 todavía no se introdujo.
 
 ## Fase 5 — Preparación del gemelo
 
-Pendiente: crear una copia independiente, adaptar su gestión y verificar la equivalencia del escenario.
+### 5.1. Objetivo
+
+Crear un proyecto independiente de EMPRESA que reproduzca la configuración y el comportamiento necesarios para probar correcciones sin modificar la red de referencia.
+
+Se conservaron la topología, las direcciones internas, las loopbacks, los costos OSPF y las políticas de firewall. Se diferenciaron las identidades, las direcciones y MAC de gestión y las credenciales de acceso.
+
+### 5.2. Copia y separación de proyectos
+
+Con los nodos de EMPRESA detenidos se creó una copia del proyecto mediante Guardar como, denominada GEMELO.
+
+Durante la adaptación se mantuvo EMPRESA detenida para evitar conflictos con las direcciones y MAC heredadas de la copia.
+
+Los nodos del nuevo proyecto se identificaron como:
+
+- GEMELO-R1, GEMELO-R2 y GEMELO-R3.
+- GEMELO-PC y GEMELO-SRV.
+
+Las LAN y los enlaces de datos de ambos proyectos permanecen separados. Únicamente las interfaces de gestión se conectan a la misma red Host-only.
+
+![Topología del proyecto GEMELO](../capturas/fase5/01-topologia-gemelo.png)
+
+*Figura 38: Proyecto GEMELO con sus nodos y conexiones.*
+
+### 5.3. Identidades y direccionamiento de gestión
+
+Se asignaron las siguientes identidades y direcciones:
+
+| Router | Identidad en EMPRESA | Gestión EMPRESA | Identidad en GEMELO | Gestión GEMELO |
+|---|---|---|---|---|
+| R1 | EMPRESA-R1 | 192.168.57.10/24 | GEMELO-R1 | 192.168.57.20/24 |
+| R2 | EMPRESA-R2 | 192.168.57.11/24 | GEMELO-R2 | 192.168.57.21/24 |
+| R3 | EMPRESA-R3 | 192.168.57.12/24 | GEMELO-R3 | 192.168.57.22/24 |
+
+Los cambios se realizaron desde las consolas de GNS3.
+
+#### GEMELO-R1
+
+```routeros
+/system identity set name=GEMELO-R1
+/ip address set [find where address="192.168.57.10/24" and interface="ether1"] address=192.168.57.20/24 comment="Gestion GEMELO"
+```
+
+#### GEMELO-R2
+
+```routeros
+/system identity set name=GEMELO-R2
+/ip address set [find where address="192.168.57.11/24" and interface="ether1"] address=192.168.57.21/24 comment="Gestion GEMELO"
+```
+
+#### GEMELO-R3
+
+```routeros
+/system identity set name=GEMELO-R3
+/ip address set [find where address="192.168.57.12/24" and interface="ether1"] address=192.168.57.22/24 comment="Gestion GEMELO"
+```
+
+El administrador conserva `192.168.57.1`. Por ello no fue necesario ampliar los orígenes autorizados en las cuentas ni en el firewall.
+
+### 5.4. Direcciones MAC y recuperación de referencias
+
+La copia conservaba las MAC de EMPRESA. Como las interfaces de gestión comparten VMnet1, se asignaron MAC diferentes a GEMELO.
+
+Con cada router detenido, se modificó su MAC base desde Configure → Network de GNS3:
+
+| Router | MAC base de GEMELO |
+|---|---|
+| R1 | 02:47:4D:00:01:01 |
+| R2 | 02:47:4D:00:02:01 |
+| R3 | 02:47:4D:00:03:01 |
+
+GNS3 asignó las MAC siguientes a las restantes tarjetas de cada router.
+
+Al reiniciar, RouterOS detectó las tarjetas como interfaces nuevas, con nombres ether9–ether16. Las direcciones, las plantillas OSPF y algunas reglas de firewall conservaron referencias a las interfaces anteriores y quedaron inválidas.
+
+Se recuperó esta correspondencia:
+
+| Interfaz detectada | Nombre utilizado en el diseño |
+|---|---|
+| ether9 | ether1 |
+| ether10 | ether2 |
+| ether11 | ether3 |
+| ether12 | ether4 |
+| ether13 | ether5 |
+| ether14 | ether6 |
+| ether15 | ether7 |
+| ether16 | ether8 |
+
+En cada router se renombraron las interfaces:
+
+```routeros
+/interface ethernet set [find where name="ether9"] name=ether1
+/interface ethernet set [find where name="ether10"] name=ether2
+/interface ethernet set [find where name="ether11"] name=ether3
+/interface ethernet set [find where name="ether12"] name=ether4
+/interface ethernet set [find where name="ether13"] name=ether5
+/interface ethernet set [find where name="ether14"] name=ether6
+/interface ethernet set [find where name="ether15"] name=ether7
+/interface ethernet set [find where name="ether16"] name=ether8
+```
+
+Después se reasignaron las entradas existentes. No se recrearon las reglas ni se reemplazaron las claves OSPF.
+
+#### Direcciones de GEMELO-R1
+
+```routeros
+/ip address set [find where address="192.168.57.20/24"] interface=ether1
+/ip address set [find where address="10.10.0.1/24"] interface=ether2
+/ip address set [find where address="10.0.12.1/30"] interface=ether3
+/ip address set [find where address="10.0.13.1/30"] interface=ether4
+```
+
+#### Direcciones de GEMELO-R2
+
+```routeros
+/ip address set [find where address="192.168.57.21/24"] interface=ether1
+/ip address set [find where address="10.0.12.2/30"] interface=ether3
+/ip address set [find where address="10.0.23.1/30"] interface=ether4
+```
+
+#### Direcciones de GEMELO-R3
+
+```routeros
+/ip address set [find where address="192.168.57.22/24"] interface=ether1
+/ip address set [find where address="10.20.0.1/24"] interface=ether2
+/ip address set [find where address="10.0.23.2/30"] interface=ether3
+/ip address set [find where address="10.0.13.2/30"] interface=ether4
+```
+
+#### Referencias comunes de firewall y DHCP
+
+En los tres routers:
+
+```routeros
+/ip firewall filter set [find where comment="TP4-IN-SSH"] in-interface=ether1
+/ip firewall filter set [find where comment="TP4-IN-MGMT-PING"] in-interface=ether1
+/ip firewall filter set [find where comment="TP4-IN-OSPF3"] in-interface=ether3
+/ip firewall filter set [find where comment="TP4-IN-OSPF4"] in-interface=ether4
+/ip firewall filter set [find where comment="TP4-IN-DATA-PING"] in-interface=!ether1
+/ip firewall filter set [find where comment="TP4-NO-MGMT-IN"] in-interface=ether1
+/ip firewall filter set [find where comment="TP4-NO-MGMT-OUT"] out-interface=ether1
+
+/ip dhcp-client set [find] interface=ether1 disabled=yes
+```
+
+#### Plantillas OSPF
+
+En GEMELO-R1:
+
+```routeros
+/routing ospf interface-template set [find where comment="F3 R1-R2"] interfaces=ether3
+/routing ospf interface-template set [find where comment="F3 R1-R3"] interfaces=ether4
+/routing ospf interface-template set [find where comment="F3 LAN usuarios"] interfaces=ether2
+```
+
+En GEMELO-R2:
+
+```routeros
+/routing ospf interface-template set [find where comment="F3 R2-R1"] interfaces=ether3
+/routing ospf interface-template set [find where comment="F3 R2-R3"] interfaces=ether4
+```
+
+En GEMELO-R3:
+
+```routeros
+/routing ospf interface-template set [find where comment="F3 R3-R2"] interfaces=ether3
+/routing ospf interface-template set [find where comment="F3 R3-R1"] interfaces=ether4
+/routing ospf interface-template set [find where comment="F3 LAN servidor"] interfaces=ether2
+```
+
+Se restableció la deshabilitación de ether5–ether8 en los tres routers y de ether2 en R2, conforme a F4. Las loopbacks conservaron sus referencias a `lo`.
+
+La revisión confirmó direcciones y reglas sin referencias inválidas y dos vecinos OSPF Full por router.
+
+![Gestión, interfaces y vecinos de GEMELO-R1](../capturas/fase5/02-gestion-ospf-r1.png)
+
+*Figura 39: Direccionamiento, MAC y vecindades de GEMELO-R1.*
+
+![Gestión, interfaces y vecinos de GEMELO-R2](../capturas/fase5/03-gestion-ospf-r2.png)
+
+*Figura 40: Direccionamiento, MAC y vecindades de GEMELO-R2.*
+
+![Gestión, interfaces y vecinos de GEMELO-R3](../capturas/fase5/04-gestion-ospf-r3.png)
+
+*Figura 41: Direccionamiento, MAC y vecindades de GEMELO-R3.*
+
+### 5.5. Credenciales y acceso administrativo
+
+Se asignaron seis contraseñas nuevas de 32 caracteres, una por cuenta y router de GEMELO. Se conservaron las cuentas netadmin y mcp_ro, sus grupos y la restricción de origen `192.168.57.1/32`.
+
+Las credenciales se almacenan localmente en `.env`, con variables separadas de EMPRESA:
+
+```text
+GEMELO_R1_NETADMIN_PASSWORD
+GEMELO_R1_READ_PASSWORD
+GEMELO_R2_NETADMIN_PASSWORD
+GEMELO_R2_READ_PASSWORD
+GEMELO_R3_NETADMIN_PASSWORD
+GEMELO_R3_READ_PASSWORD
+```
+
+Se comprobaron conexiones SSH nuevas con ambas cuentas en los tres routers. Las contraseñas de EMPRESA no se modificaron.
+
+Desde Windows se verificó la correspondencia entre dirección e identidad:
+
+```powershell
+ssh netadmin@192.168.57.20
+ssh netadmin@192.168.57.21
+ssh netadmin@192.168.57.22
+```
+
+Cada conexión se realiza por separado. Dentro de la sesión:
+
+```routeros
+/system identity print
+/quit
+```
+
+| Dirección | Identidad verificada |
+|---|---|
+| 192.168.57.20 | GEMELO-R1 |
+| 192.168.57.21 | GEMELO-R2 |
+| 192.168.57.22 | GEMELO-R3 |
+
+También se comprobó el acceso a EMPRESA con sus credenciales correspondientes.
+
+![Identidades de EMPRESA-R1 y GEMELO-R1 por SSH](../capturas/fase5/05-identidades-ssh.png)
+
+*Figura 42: Acceso a instancias distintas mediante sus direcciones de gestión.*
+
+### 5.6. Ejecución simultánea
+
+Se habilitó en las propiedades de los proyectos la opción de mantenerlos ejecutándose en segundo plano al cambiar de proyecto.
+
+Se mantuvieron encendidos GNS3, la GNS3 VM y los nodos de ambos entornos.
+
+Desde Windows se comprobó el alcance de las seis direcciones:
+
+```powershell
+$direcciones = @(
+    "192.168.57.10", "192.168.57.11", "192.168.57.12",
+    "192.168.57.20", "192.168.57.21", "192.168.57.22"
+)
+
+foreach ($ip in $direcciones) {
+    Write-Host "`n--- $ip ---"
+    ping.exe -n 2 $ip
+}
+```
+
+Las seis direcciones respondieron a la comprobación de conectividad
+con ambos proyectos encendidos. La captura muestra el resultado
+positivo para cada destino.
+
+![Alcance simultáneo de los seis routers](../capturas/fase5/06-gestion-simultanea.png)
+
+*Figura 43: Acceso de gestión con EMPRESA y GEMELO encendidos.*
+
+Las IP internas pueden repetirse porque las redes de datos no están conectadas entre proyectos. Las IP y MAC de gestión son distintas porque comparten el segmento Host-only.
+
+### 5.7. Hosts y equivalencia funcional
+
+Se ajustaron los nombres de las VPCS para respetar el máximo de 12 caracteres.
+
+En la PC:
+
+```text
+set pcname GEMELO-PC
+save
+```
+
+En el servidor:
+
+```text
+set pcname GEMELO-SRV
+save
+```
+
+Se conservaron las direcciones del escenario:
+
+| Host | Dirección | Gateway |
+|---|---|---|
+| GEMELO-PC | 10.10.0.10/24 | 10.10.0.1 |
+| GEMELO-SRV | 10.20.0.10/24 | 10.20.0.1 |
+
+Desde GEMELO-PC se verificó:
+
+```text
+show ip
+ping 10.20.0.10
+ping 10.255.0.3
+ping 10.10.0.1
+ping 192.168.57.20
+```
+
+| Destino | Resultado observado |
+|---|---|
+| SRV — 10.20.0.10 | 5 respuestas de 5 |
+| Loopback de R3 — 10.255.0.3 | 5 timeouts |
+| Gateway — 10.10.0.1 | 5 respuestas de 5 |
+| Gestión de GEMELO-R1 — 192.168.57.20 | 5 timeouts |
+
+GEMELO reprodujo el comportamiento permitido y bloqueado documentado para EMPRESA. La comprobación es funcional y se limita a estas pruebas y a las vecindades OSPF verificadas.
+
+![Configuración y pruebas desde GEMELO-PC](../capturas/fase5/07-pruebas-gemelo-pc.png)
+
+*Figura 44: Comprobación funcional del escenario en GEMELO.*
+
+### 5.8. Independencia del almacenamiento
+
+Se compararon las líneas de ejecución de QEMU de EMPRESA-R1 y GEMELO-R1.
+
+Los archivos de disco activo se encuentran en rutas distintas:
+
+```text
+EMPRESA-R1:
+/opt/gns3/projects/7e9e4c35-b1ae-4d4a-a70b-24e2031d7abf/project-files/qemu/756e0b3e-6864-4594-9cb6-3a872471f0f5/hda_disk.qcow2
+
+GEMELO-R1:
+/opt/gns3/projects/b997c264-29b4-491e-a83b-c0847ca7507c/project-files/qemu/df17494c-16e7-4fff-9542-fb47294e2c8a/hda_disk.qcow2
+```
+
+El nombre común `hda_disk.qcow2` no implica que sea el mismo archivo. Las rutas corresponden a proyectos y nodos diferentes.
+
+La independencia del almacenamiento se comprobó sobre R1 como
+muestra representativa. No se inspeccionaron individualmente los
+discos de R2 y R3.
+
+
+### 5.9. Resultado y alcance
+
+Quedó preparado GEMELO como proyecto separado, con identidades, direcciones y MAC de gestión y credenciales de acceso propias.
+
+Se verificaron:
+
+- Acceso simultáneo a las seis direcciones de gestión.
+- Correspondencia entre IP e identidad mediante SSH.
+- Acceso con las nuevas credenciales de GEMELO.
+- Dos vecinos OSPF Full por router del gemelo.
+- Comportamiento esperado del tráfico permitido y bloqueado.
+- Rutas de disco activo diferentes en el par R1 inspeccionado.
+
+La equivalencia comprobada corresponde al escenario definido. No se realizó una comparación exhaustiva de todos los parámetros ni se implementó sincronización automática.
+
+Las claves OSPF se conservaron de la copia; no forman parte de las seis contraseñas de usuario renovadas. Las redes de datos de ambos proyectos permanecen separadas.
+
+En F6 se incorporará GEMELO al inventario definitivo de herramientas, con lectura en EMPRESA y modificaciones controladas únicamente en GEMELO.
+
+La falla intencional de firewall todavía no se introdujo.
 
 ## Fase 6 — Integración de IA mediante MCP
 
