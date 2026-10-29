@@ -1073,6 +1073,12 @@ El laboratorio prepara un escenario de diagnóstico y corrección de una regla d
 | Recuperación administrativa | Si Windows no está disponible, se conserva la consola de GNS3 como acceso local. |
 | IPv6 | Se verificaron las reglas de entrada y tránsito, sin una prueba de tráfico. La pila permanece habilitada. |
 | Pruebas negativas | OSPF se ensayó en R1–R2 y el puerto SSH se probó desde R2 hacia R1. No se repitieron todas las combinaciones de equipos y orígenes. |
+| Hosts y consolas | PC y SRV son simuladores VPCS, sin autenticación propia de consola ni controles de un sistema operativo completo. Sus consolas Telnet no cifran el tráfico y deben mantenerse restringidas al entorno de administración de GNS3. La demo evalúa el filtrado de red, no la seguridad de los hosts finales. |
+
+Se eligió VPCS porque las pruebas requieren únicamente direccionamiento
+y conectividad ICMP. Utilizar hosts Linux permitiría evaluar usuarios,
+servicios y controles locales, pero ampliaría el alcance sin ser
+necesario para validar la propuesta de la demo.
 
 Las pruebas respaldan los comportamientos observados; no constituyen una auditoría completa ni acreditan resistencia general frente a ataques.
 
@@ -1451,7 +1457,147 @@ La falla intencional de firewall todavía no se introdujo.
 
 ## Fase 6 — Integración de IA mediante MCP
 
-Pendiente: documentar las herramientas definitivas, con lectura en EMPRESA y modificaciones controladas en GEMELO.
+### 6.1. Objetivo y funcionamiento
+
+Se implementó un servidor MCP en Python para permitir que la IA consulte EMPRESA y utilice GEMELO como entorno de diagnóstico, experimentación y validación de cambios.
+
+La integración utiliza herramientas generales: la IA selecciona los comandos, interpreta las respuestas y decide qué comprobar a continuación. No contiene una función que identifique o corrija automáticamente la falla del escenario.
+
+El recorrido de comunicación es:
+
+**ChatGPT → Secure MCP Tunnel → servidor MCP local → routers por SSH o extremos VPCS por consola Telnet.**
+
+El servidor se ejecuta localmente y se comunica con el cliente del túnel mediante stdio. El túnel proporciona la conexión con ChatGPT sin publicar directamente los routers ni las consolas en Internet.
+
+### 6.2. Separación de acceso entre entornos
+
+| Entorno | Cuenta o acceso | Capacidades |
+|---|---|---|
+| EMPRESA | SSH con `mcp_ro` | Consultas sujetas a los permisos de lectura de RouterOS |
+| GEMELO | SSH con `mcp_ro` | Consultas de configuración y estado |
+| GEMELO | SSH con `netadmin` | Ejecución de comandos administrativos en los tres routers |
+| GEMELO-PC y GEMELO-SRV | Consolas VPCS | Consultas, pruebas de conectividad y configuración |
+
+El inventario es fijo. La herramienta administrativa admite exclusivamente routers de GEMELO, y esta separación también se valida en la capa de ejecución. El servidor no carga credenciales administrativas de EMPRESA.
+
+Dentro de GEMELO no se restringen los comandos a una falla, protocolo o subsistema determinado. La IA puede trabajar con los permisos de `netadmin`, incluidos cambios que podrían afectar su propia conectividad.
+
+Las conexiones SSH verifican la clave de host registrada en `known_hosts`, la identidad del router y la MAC de su interfaz de gestión antes de ejecutar los comandos.
+
+Implementación: [configuracion.py](mcp/configuracion.py) y [conexion_ssh.py](mcp/conexion_ssh.py).
+
+### 6.3. Herramientas definitivas
+
+| Herramienta | Parámetros | Función |
+|---|---|---|
+| `listar_routers` | Sin parámetros | Presenta los seis routers y señala dónde se permite administración |
+| `consultar_router` | `equipo`, `comando` | Ejecuta una consulta elegida por la IA mediante `mcp_ro` |
+| `ejecutar_comando_gemelo` | `equipo`, `comando` | Ejecuta comandos con `netadmin` exclusivamente en GEMELO |
+| `ejecutar_comando_vpcs` | `equipo`, `comando` | Ejecuta un comando en GEMELO-PC o GEMELO-SRV |
+
+Las consultas no dependen de una lista cerrada de operaciones. La protección de EMPRESA se apoya en los permisos de su cuenta de RouterOS y en la ausencia de acceso administrativo desde el MCP.
+
+Las herramientas se publican con anotaciones que distinguen lectura y administración. Estas anotaciones describen su comportamiento al cliente; no sustituyen los controles de acceso.
+
+Implementación: [servidor_mcp.py](mcp/servidor_mcp.py) y [operaciones_router.py](mcp/operaciones_router.py).
+
+### 6.4. Acceso a los extremos del gemelo
+
+Se incorporó acceso a las consolas de ambos VPCS para realizar pruebas desde los extremos, además de consultar los routers.
+
+| Equipo | Dirección del servidor GNS3 | Puerto de consola |
+|---|---|---|
+| GEMELO-PC | `192.168.57.130` | `5010` |
+| GEMELO-SRV | `192.168.57.130` | `5012` |
+
+La conexión procesa la negociación Telnet y verifica el prompt esperado antes de enviar el comando. Cada llamada admite un comando VPCS.
+
+El estado `completado` indica que regresó el prompt, no que la operación haya tenido éxito. Por ejemplo, un ping puede completar su ejecución y devolver únicamente timeouts; la IA debe interpretar esa salida.
+
+Estas consolas no incorporan autenticación propia. Su acceso depende del aislamiento y la protección de la red de administración del laboratorio.
+
+Implementación: [consolas_gemelo.py](mcp/consolas_gemelo.py).
+
+### 6.5. Actualización, diagnóstico y cierre de intervenciones
+
+La actualización de GEMELO se realiza a solicitud del usuario. La IA consulta EMPRESA, identifica diferencias relevantes y ejecuta los cambios necesarios en GEMELO, conservando las diferencias intencionales de gestión, identidades, MAC y credenciales.
+
+No se implementó sincronización continua ni se considera que una comparación parcial demuestre equivalencia completa entre ambos escenarios.
+
+Las instrucciones del servidor establecen el siguiente procedimiento:
+
+1. Investigar EMPRESA mediante lectura.
+2. Comprobar o reproducir el síntoma en GEMELO.
+3. Sustentar el diagnóstico con configuración, estado y pruebas.
+4. Aplicar y validar la corrección exclusivamente en GEMELO.
+5. Presentar recomendaciones para EMPRESA pendientes de aplicación por su administrador.
+
+Al finalizar, se solicita un informe en Markdown dentro del chat, con diagnóstico, acciones justificadas, comandos relevantes, resultados y limitaciones. No se agregó una herramienta para escribir informes en el equipo local.
+
+Estas instrucciones orientan el comportamiento de la IA; no constituyen una garantía de que todas las respuestas sigan exactamente el mismo formato o procedimiento.
+
+Definición de instrucciones y herramientas: [servidor_mcp.py](mcp/servidor_mcp.py).
+
+### 6.6. Configuración local y arranque
+
+Las credenciales se mantienen en `demo/mcp/.env`, excluido del repositorio. Se utilizan tres contraseñas de lectura para EMPRESA y seis para GEMELO, correspondientes a sus cuentas de lectura y administración.
+
+El archivo también contiene los parámetros del túnel y las direcciones de las consolas. Las claves de autenticación OSPF no son necesarias para establecer estas conexiones.
+
+El entorno virtual y `tunnel-client.exe` permanecen fuera del control de versiones. Las dependencias se declaran en [requirements.txt](mcp/requirements.txt).
+
+El script [iniciar.py](mcp/iniciar.py) permite:
+
+```bash
+# Crear el perfil local del túnel.
+./demo/mcp/.venv/Scripts/python.exe demo/mcp/iniciar.py --configurar
+
+# Comprobar su configuración.
+./demo/mcp/.venv/Scripts/python.exe demo/mcp/iniciar.py --doctor
+
+# Iniciar el túnel.
+./demo/mcp/.venv/Scripts/python.exe demo/mcp/iniciar.py
+```
+
+El perfil apunta al intérprete del entorno virtual y a `servidor_mcp.py`. El cliente del túnel inicia el servidor MCP; no es necesario ejecutar ambos por separado.
+
+Para utilizar la integración deben permanecer activos los proyectos de GNS3, sus equipos y el cliente del túnel.
+
+### 6.7. Verificaciones realizadas
+
+Se verificaron las conexiones SSH de lectura a los seis routers y las conexiones administrativas a los tres routers de GEMELO.
+
+La prueba de protocolo comprobó:
+
+- Inicialización de la sesión MCP y publicación de las cuatro herramientas.
+- Consultas generales a EMPRESA y GEMELO con `mcp_ro`.
+- Ejecución de una consulta mediante `netadmin` en GEMELO.
+- Rechazo de EMPRESA y destinos desconocidos en la herramienta administrativa.
+- Acceso a ambas consolas VPCS mediante MCP.
+- Rechazo de consolas fuera del inventario de GEMELO.
+
+Las verificaciones pueden ejecutarse mediante:
+
+```bash
+./demo/mcp/.venv/Scripts/python.exe demo/mcp/servidor_mcp.py --verificar
+./demo/mcp/.venv/Scripts/python.exe demo/mcp/verificar_mcp.py
+```
+
+Implementación: [verificar_mcp.py](mcp/verificar_mcp.py).
+
+También se comprobó la integración desde ChatGPT y se ensayó la reproducción de un bloqueo de firewall en GEMELO. La IA relacionó los pings fallidos con el incremento del contador de la regla, la deshabilitó en GEMELO-R1 y verificó la recuperación de respuestas. EMPRESA permaneció sin modificaciones desde la integración.
+
+La conectividad permitida hacia SRV y el bloqueo hacia la loopback protegida se comprobaron mediante las consolas automatizadas. La conservación de restricciones después de cada intervención debe validarse específicamente; no se deduce únicamente de estas pruebas iniciales.
+
+### 6.8. Alcance y limitaciones
+
+La integración permite investigar problemas mediante comandos generales, pero la calidad del diagnóstico depende del razonamiento de la IA y de las evidencias disponibles.
+
+El acceso administrativo puede producir cambios incorrectos o interrumpir la conexión con GEMELO. El MCP no implementa reversión automática de configuraciones. Ante una ejecución inconclusa se debe consultar el estado antes de repetir operaciones.
+
+Las verificaciones de identidad y MAC están asociadas al inventario configurado. Si se modifican intencionalmente esos valores, será necesario actualizarlo para restablecer el acceso verificado.
+
+Las pruebas con VPCS acreditan conectividad y comportamiento de filtrado dentro del alcance ensayado. No representan la validación de servicios de aplicación ni la seguridad de sistemas operativos completos.
 
 ## Fase 7 — Escenario de falla y validación
 
