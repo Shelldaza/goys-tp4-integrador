@@ -21,3 +21,8 @@ credentials*
 *.bak
 *.log
 *.rsc.bak
+
+
+.venv/
+__pycache__/
+*.pyc
