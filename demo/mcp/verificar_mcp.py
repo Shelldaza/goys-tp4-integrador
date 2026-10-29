@@ -58,7 +58,12 @@ async def verificar() -> None:
 
     async with stdio_client(parametros) as (lectura, escritura):
         async with ClientSession(lectura, escritura) as sesion:
-            await sesion.initialize()
+            inicio = await sesion.initialize()
+            exigir(
+                "Cierre de intervenciones" in (inicio.instructions or ""),
+                "No se recibieron las instrucciones de cierre.",
+            )
+            print("OK: instrucciones de cierre recibidas.", flush=True)
             print("OK: sesion MCP inicializada.", flush=True)
 
             listado = await sesion.list_tools()
