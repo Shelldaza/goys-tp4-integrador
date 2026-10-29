@@ -4,7 +4,7 @@ import argparse
 import asyncio
 import json
 from typing import Literal
-
+from firewall_gemelo import comparar_firewall as realizar_comparacion
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.exceptions import ToolError
 from mcp.types import ToolAnnotations
@@ -68,6 +68,20 @@ def consultar_router(
     try:
         credenciales = cargar_credenciales()
         return realizar_consulta(equipo, consulta, credenciales)
+    except (ErrorSSH, ValueError) as error:
+        raise ToolError(str(error)) from None
+
+
+@mcp.tool(annotations=ANOTACIONES_LECTURA)
+def comparar_firewall_escenario() -> dict:
+    """Compara las reglas IPv4 forward del escenario entre ambos R1.
+
+    Compara configuracion y orden, excluyendo identificadores locales
+    y contadores. No modifica los routers.
+    El resultado no acredita equivalencia del resto de la red.
+    """
+    try:
+        return realizar_comparacion(cargar_credenciales())
     except (ErrorSSH, ValueError) as error:
         raise ToolError(str(error)) from None
 

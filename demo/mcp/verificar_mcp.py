@@ -1,4 +1,4 @@
-"""Verificacion local del protocolo MCP y sus consultas de lectura."""
+"""Verificacion local del protocolo MCP y sus herramientas de lectura."""
 
 import asyncio
 import json
@@ -39,11 +39,17 @@ async def verificar() -> None:
             listado = await sesion.list_tools()
             nombres = {herramienta.name for herramienta in listado.tools}
 
-            if nombres != {"listar_routers", "consultar_router"}:
+            if nombres != {
+                "listar_routers",
+                "consultar_router",
+                "comparar_firewall_escenario",
+            }:
                 raise RuntimeError("El conjunto de herramientas no coincide.")
 
-            print("OK: solo se publican las dos herramientas de lectura.",
-                  flush=True)
+            print(
+                "OK: solo se publican las tres herramientas de lectura.",
+                flush=True,
+            )
 
             inventario = await sesion.call_tool("listar_routers", {})
             if inventario.isError:
@@ -67,8 +73,60 @@ async def verificar() -> None:
                         f"Respuesta de identidad inesperada para {equipo}."
                     )
 
-                print(f"OK: identidad de {equipo} consultada mediante MCP.",
-                      flush=True)
+                print(
+                    f"OK: identidad de {equipo} consultada mediante MCP.",
+                    flush=True,
+                )
+
+            resultado = await sesion.call_tool(
+                "comparar_firewall_escenario",
+                {},
+            )
+            comparacion = obtener_datos(resultado)
+
+            if comparacion.get("estado") not in {
+                "equivalente_en_alcance",
+                "diferencias",
+            }:
+                raise RuntimeError(
+                    "La comparacion devolvio un estado inesperado."
+                )
+
+            if comparacion.get("modificaciones_aplicadas") is not False:
+                raise RuntimeError(
+                    "La comparacion no informa ausencia de modificaciones."
+                )
+
+            if (
+                not isinstance(comparacion.get("orden_empresa"), list)
+                or not isinstance(comparacion.get("orden_gemelo"), list)
+                or not isinstance(comparacion.get("orden_coincide"), bool)
+                or not isinstance(comparacion.get("diferencias"), list)
+            ):
+                raise RuntimeError(
+                    "La estructura de la comparacion es inesperada."
+                )
+
+            equivalente = (
+                comparacion["orden_coincide"]
+                and not comparacion["diferencias"]
+            )
+            if (
+                comparacion["estado"] == "equivalente_en_alcance"
+            ) != equivalente:
+                raise RuntimeError(
+                    "El estado de la comparacion contradice sus resultados."
+                )
+
+            print(
+                "OK: comparacion de firewall consultada mediante MCP "
+                f"({comparacion['estado']}).",
+                flush=True,
+            )
+            print(
+                "OK: la comparacion informa que no aplico modificaciones.",
+                flush=True,
+            )
 
             rechazado = await sesion.call_tool(
                 "consultar_router",
