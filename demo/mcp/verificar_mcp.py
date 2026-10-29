@@ -1,4 +1,4 @@
-"""Verifica las herramientas generales sin modificar configuraciones."""
+"""Verifica routers y consolas MCP sin modificar configuraciones."""
 
 import asyncio
 import json
@@ -72,6 +72,7 @@ async def verificar() -> None:
                     "listar_routers",
                     "consultar_router",
                     "ejecutar_comando_gemelo",
+                    "ejecutar_comando_vpcs",
                 },
                 "El conjunto de herramientas no coincide.",
             )
@@ -84,23 +85,34 @@ async def verificar() -> None:
                     f"Anotaciones incorrectas para {nombre}.",
                 )
 
-            administrativa = herramientas["ejecutar_comando_gemelo"]
-            exigir(
-                administrativa.annotations is not None
-                and administrativa.annotations.readOnlyHint is False
-                and administrativa.annotations.destructiveHint is True,
-                "La herramienta administrativa no esta identificada como tal.",
-            )
-
-            equipos = (
-                administrativa.inputSchema["properties"]["equipo"]["enum"]
-            )
-            exigir(
-                set(equipos) == {
+            destinos_esperados = {
+                "ejecutar_comando_gemelo": {
                     "GEMELO-R1", "GEMELO-R2", "GEMELO-R3",
                 },
-                "La herramienta administrativa admite equipos inesperados.",
-            )
+                "ejecutar_comando_vpcs": {
+                    "GEMELO-PC", "GEMELO-SRV",
+                },
+            }
+
+            for nombre, destinos in destinos_esperados.items():
+                herramienta = herramientas[nombre]
+                anotaciones = herramienta.annotations
+
+                exigir(
+                    anotaciones is not None
+                    and anotaciones.readOnlyHint is False
+                    and anotaciones.destructiveHint is True,
+                    f"Anotaciones administrativas incorrectas: {nombre}.",
+                )
+
+                equipos = (
+                    herramienta.inputSchema["properties"]["equipo"]["enum"]
+                )
+                exigir(
+                    set(equipos) == destinos,
+                    f"La herramienta admite equipos inesperados: {nombre}.",
+                )
+
             print("OK: herramientas y separacion de entornos.", flush=True)
 
             inventario = await sesion.call_tool("listar_routers", {})
@@ -118,6 +130,7 @@ async def verificar() -> None:
                 datos = obtener_datos(resultado)
                 exigir(
                     datos.get("estado") == "completado"
+                    and datos.get("equipo") == equipo
                     and datos.get("salida") == equipo
                     and datos.get("usuario") == "mcp_ro",
                     f"Consulta general incorrecta para {equipo}.",
@@ -134,6 +147,7 @@ async def verificar() -> None:
             datos = obtener_datos(resultado)
             exigir(
                 datos.get("estado") == "completado"
+                and datos.get("equipo") == "GEMELO-R1"
                 and datos.get("salida") == "GEMELO-R1"
                 and datos.get("usuario") == "netadmin",
                 "Fallo la ejecucion mediante netadmin.",
@@ -150,8 +164,39 @@ async def verificar() -> None:
                     "MCP acepto un destino administrativo no permitido.",
                 )
 
-            print("OK: destinos administrativos no permitidos rechazados.",
-                  flush=True)
+            print(
+                "OK: destinos administrativos no permitidos rechazados.",
+                flush=True,
+            )
+
+            for equipo in ("GEMELO-PC", "GEMELO-SRV"):
+                resultado = await sesion.call_tool(
+                    "ejecutar_comando_vpcs",
+                    {"equipo": equipo, "comando": "show ip"},
+                )
+                datos = obtener_datos(resultado)
+                exigir(
+                    datos.get("estado") == "completado"
+                    and datos.get("equipo") == equipo
+                    and "IP/MASK" in datos.get("salida", ""),
+                    f"Fallo la consulta de consola para {equipo}.",
+                )
+                print(
+                    f"OK: consola de {equipo} consultada mediante MCP.",
+                    flush=True,
+                )
+
+            for equipo in ("EMPRESA-PC", "FUERA-DEL-INVENTARIO"):
+                resultado = await sesion.call_tool(
+                    "ejecutar_comando_vpcs",
+                    {"equipo": equipo, "comando": "show ip"},
+                )
+                exigir(
+                    resultado.isError,
+                    "MCP acepto una consola fuera de GEMELO.",
+                )
+
+            print("OK: consolas no permitidas rechazadas.", flush=True)
 
     print("Verificacion completada. No se modificaron configuraciones.")
 
