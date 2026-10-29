@@ -36,6 +36,7 @@ Ambos participan en la revisión del trabajo, el registro de avances y la defens
 | 27/10/2026 | Se configuraron las LAN, los enlaces internos, las loopbacks y las VPCS de EMPRESA. Se verificaron los tres enlaces entre routers en ambos sentidos y el acceso de cada host a su gateway, sin pérdidas en las pruebas. Se documentó F2 y se incorporaron ocho capturas. | Facundo | 19820b3 |
 | 27/10/2026 | Se configuró OSPFv2 en área 0 con Router ID explícitos, interfaces pasivas y costos que favorecen R1–R3. Se verificaron dos vecinos FULL por router, rutas aprendidas y comunicación entre PC y SRV en ambos sentidos. Se documentó F3 y se incorporaron cinco capturas. | Facundo | 695761c |
 | 28/10/2026 | Se configuró y documentó la seguridad de EMPRESA: cuentas y permisos, restricciones de gestión, servicios e interfaces sin uso deshabilitados, filtrado IPv4, bloqueo de entrada y tránsito IPv6 y autenticación OSPF SHA256. Se verificaron tráfico permitido y bloqueado, rechazo de escritura, prueba OSPF con clave incorrecta y recuperación, y acceso al puerto SSH desde orígenes autorizado y no autorizado. Se incorporaron 18 capturas y se documentaron las limitaciones. | Facundo | 64592db |
+| 28/10/2026 | Se preparó GEMELO como copia de EMPRESA, con identidades, IP y MAC de gestión y credenciales propias. Se repararon las referencias de interfaces tras cambiar las MAC. Se verificaron ejecución simultánea, acceso SSH, vecinos OSPF Full y tráfico permitido y bloqueado. Se documentó F5 con siete capturas y la comprobación de discos activos distintos en R1. | Facundo | 6795726 |
 
 Las pruebas previas se registran retrospectivamente. Completar sus fechas y referencias a commits cuando se disponga de esos datos.
 
@@ -66,8 +67,9 @@ Las pruebas previas se registran retrospectivamente. Completar sus fechas y refe
 - [x] Documentar F3 e incorporar sus capturas.
 - [x] Configurar y documentar la seguridad de EMPRESA.
 - [x] Verificar permisos, filtrado y autenticación OSPF mediante pruebas positivas y negativas.
+- [x] Preparar GEMELO y verificar su independencia y equivalencia para el escenario definido.
+- [x] Documentar F5 e incorporar sus capturas.
 - [ ] Aplicar y verificar los permisos definitivos de la integración: lectura en EMPRESA y modificaciones controladas en GEMELO.
-- [ ] Preparar GEMELO y verificar su independencia y equivalencia con EMPRESA.
 - [ ] Implementar las herramientas MCP definitivas.
 - [ ] Preparar una falla reproducible de firewall.
 - [ ] Verificar diagnóstico, corrección en GEMELO y conservación de los bloqueos requeridos.
