@@ -52,6 +52,7 @@ Ambos participan en la revisión del trabajo, el registro de avances y la defens
 | 29/10/2026 | Se documentó F6 con las herramientas definitivas, separación de accesos, consolas, arranque, verificaciones y limitaciones. Se actualizaron los requisitos de reproducción en demo/README.md. | Facundo | 85b0f0c |
 | 29/10/2026 | Se documentó F7: introducción manual del bloqueo en EMPRESA, reproducción en GEMELO, diagnóstico mediante pings y contadores, deshabilitación de la regla únicamente en GEMELO y recuperación de respuestas. Quedó pendiente registrar la conservación del bloqueo hacia la loopback después de la corrección. | Facundo | c38d0af |
 | 13/11/2026 | Se incorporaron los proyectos portables EMPRESA y GEMELO en demo/Archivos-GNS3/ y se completó la guía de instalación: importación, red Host-only, conservación de MAC, credenciales locales, verificación SSH, configuración del túnel y conexión con ChatGPT. La reproducción en otra computadora permanece pendiente de validación. | Facundo | 206b4f0  |
+| 15/11/2026 | Se reprodujo la demo completa en una segunda computadora (importación de proyectos, red Host-only, `.env`, túnel propio y conexión con ChatGPT). Se ejecutó tres veces el escenario de falla, con duraciones de 2 min 15 s y 2 min 20 s en dos de ellas. Se registró que GEMELO-PC sigue sin alcanzar 10.255.0.3 después de la corrección. Se actualizó el póster. | Irineo | 2283dfd |
 
 Las pruebas previas se registran retrospectivamente. Completar sus fechas y referencias a commits cuando se disponga de esos datos.
 
@@ -101,13 +102,13 @@ Las pruebas previas se registran retrospectivamente. Completar sus fechas y refe
 - [x] Completar la guía de importación, red Host-only y conservación de las MAC de los proyectos.
 - [x] Documentar la instalación del MCP, configuración local de credenciales, verificación SSH, creación del túnel y conexión con ChatGPT.
 - [ ] Preparar un `.env.example` sin secretos.
-- [ ] Validar la importación y reproducción completa en otra computadora.
-- [ ] Registrar explícitamente la conservación del bloqueo hacia la loopback protegida después de la corrección.
+- [x] Validar la importación y reproducción completa en otra computadora.
+- [x] Registrar explícitamente la conservación del bloqueo hacia la loopback protegida después de la corrección.
 - [ ] Ejecutar al menos tres pruebas completas y registrar resultados.
 - [ ] Preparar capturas y grabación de respaldo.
 - [x] Investigar y seleccionar las referencias bibliográficas.
-- [ ] Redactar y revisar el artículo de modalidad B.
-- [ ] Diseñar y revisar el póster A1.
+- [x] Redactar y revisar el artículo de modalidad B.
+- [x] Diseñar y revisar el póster A1.
 - [ ] Completar el checklist oficial y ensayar la presentación.
 
 ## 📝 Notas
@@ -121,7 +122,7 @@ Las pruebas previas se registran retrospectivamente. Completar sus fechas y refe
 - Los informes se presentan en el chat mediante instrucciones del servidor; su formato y completitud se revisan durante los ensayos.
 - ChatGPT y el túnel requieren Internet. Se preparará una grabación local como respaldo.
 - Los proyectos portables incluyen MAC de gestión distintas para ambos entornos. Deben conservarse al importar y coincidir con el inventario del MCP.
-- La reproducción completa en otra computadora permanece pendiente de validación. Deben comprobarse la Cloud, las direcciones de gestión y los puertos de consola.
+- La demo se reprodujo en una segunda computadora. Cada instalación necesita su propio túnel y comprobar la Cloud, las direcciones de gestión y los puertos de consola.
 - Cada instalación necesita su entorno virtual, archivo `.env` y perfil local del túnel. El acceso desde ChatGPT depende de los permisos y la disponibilidad de la cuenta utilizada.
 - EMPRESA representa una organización ficticia. Las credenciales son exclusivas del laboratorio y se entregan por un canal privado para reproducir la demo.
 - El archivo `.env` y la API key personal de OpenAI no se publican.
