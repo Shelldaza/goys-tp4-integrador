@@ -1,70 +1,74 @@
 # Checklist de entrega — TP4 Feria de Redes
 
-Usar este checklist antes de la **Clase 13** (ensayo) y volver a verificarlo antes de la **Clase 14** (Feria de Redes).
+Revisar antes del ensayo y de la presentación final.
 
 ---
 
 ## 📄 Documento
 
-- [ ] Tiene carátula con datos del grupo (nombre, integrantes, modalidad, fecha)
-- [ ] Sigue la estructura de la modalidad elegida (A, B o C)
-- [ ] Extensión correcta: 5-7 págs. (modalidades A y B) o 6-8 págs. (modalidad C)
-- [ ] Incluye al menos un diagrama o tabla según corresponda
-- [ ] Las imágenes tienen leyenda y son legibles
-- [ ] Tiene referencias bibliográficas (mínimo 6 para modalidad B)
-- [ ] Formato de referencias consistente (APA, IEEE o ACM)
-- [ ] Formato de entrega: PDF
-- [ ] Alguien más que el autor lo leyó (no tiene errores de tipeo ni ortografía)
-- [ ] Está subido al repositorio del grupo
+- [x] Tiene carátula con datos del grupo: nombre, integrantes, modalidad y fecha.
+- [x] Sigue la estructura de la modalidad B.
+- [x] Extensión correcta: 7 páginas.
+- [x] Incluye una tabla comparativa y un diagrama original.
+- [x] Las imágenes tienen leyenda y son legibles.
+- [x] Tiene al menos 6 referencias bibliográficas verificables.
+- [x] El formato de las referencias es consistente.
+- [x] Está en formato PDF.
+- [x] Fue leído y revisado por alguien más que su autor.
+- [x] Está subido al repositorio del grupo.
 
 ## 🖼️ Póster
 
-- [ ] Formato A1 (vertical u horizontal, según se defina)
-- [ | Está diseñado para ser autocontenido (se entiende sin explicación oral)
-- [ ] Incluye: título del proyecto, grupo, objetivos, metodología, resultados principales, conclusiones
-- [ ] Tiene al menos un diagrama o imagen representativa
-- [ ] Letra legible desde al menos 1 metro de distancia
-- [ ] Usa colores y contraste adecuados (no texto claro sobre fondo claro)
-- [ ] Está subido al repositorio en formato editable + PDF
-- [ ] Opcional: versión impresa lista para la feria
+- [x] Formato A1.
+- [x] Está diseñado para ser autocontenido.
+- [x] Incluye título, grupo, objetivos, metodología, resultados y conclusiones.
+- [x] Tiene un diagrama representativo.
+- [x] La letra es legible desde al menos 1 metro.
+- [x] Utiliza colores y contraste adecuados.
+- [x] Está subido al repositorio en formato editable y PDF.
+- [x] Está disponible para proyectar; la impresión es opcional.
 
 ## 💻 Demo / Estación interactiva
 
-- [ ] Funciona en la laptop del grupo (probar en el aula real si es posible)
-- [ ] No depende de internet — o tiene plan B grabado (video, capturas)
-- [ ] Escenario principal probado al menos 3 veces de principio a fin
-- [ ] Escenario de falla preparado por si algo sale mal durante la demo
-- [ ] Tiempo de demo estimado: 3-5 minutos
-- [ ] Se ve bien en la pantalla de la laptop y en un monitor externo/proyector
+- [x] Funciona en la computadora del grupo y fue reproducida en otra computadora.
+- [x] Dispone de una grabación como respaldo ante problemas de Internet.
+- [x] El escenario principal fue probado al menos 3 veces de principio a fin.
+- [x] El escenario de falla está preparado.
+- [x] La duración de la demo se ajusta a 3–5 minutos.
+- [x] La visualización es adecuada en la laptop y en pantalla externa.
 
 ## 📂 Repositorio
 
-- [ ] README.md completo: qué es el proyecto, cómo reproducirlo, tecnologías usadas
-- [ ] Commits de todos los integrantes (no commits de una sola persona)
-- [ ] Código, scripts y configuraciones funcionando y documentados
-- [ ] Capturas de pantalla o evidencias incluidas
-- [ ] Póster en formato editable + PDF
-- [ ] Documento en PDF
-- [ | No hay archivos temporales, binarios o contraseñas hardcodeadas
+- [x] README completo: propósito, reproducción y tecnologías utilizadas.
+- [x] Todos los integrantes tienen commits propios.
+- [x] Código, scripts y configuraciones funcionando y documentados.
+- [x] Capturas y evidencias incluidas.
+- [x] Póster en formato editable y PDF.
+- [x] Documento en PDF y fuente editable.
+- [x] Archivos temporales, `.env`, claves personales y ejecutables locales excluidos.
+
+Los proyectos portables GNS3 se incluyen intencionalmente en
+`demo/Archivos-GNS3/` para reproducir el laboratorio.
 
 ## 👥 Presentación grupal
 
-- [ ] Roles definidos: quién explica el póster, quién maneja la demo, quién responde preguntas técnicas
-- [ ] Presentación ensayada al menos 1 vez con cronómetro
-- [ ] Saben explicar el proyecto en 30 segundos (elevator pitch)
-- [ | Preparados para preguntas del docente: decisiones técnicas, alternativas, qué harían diferente
-- [ ] Tienen una respuesta para "¿cómo se vincula esto con seguridad?"
+- [x] Roles definidos para explicar el póster, conducir la demo y responder preguntas.
+- [x] Presentación ensayada al menos una vez con cronómetro.
+- [x] Explicación del proyecto en 30 segundos preparada.
+- [x] Preparación para preguntas sobre decisiones técnicas, alternativas y mejoras.
+- [x] Explicación de la relación del proyecto con seguridad preparada.
 
 ## 🎒 Logística — día de la feria
 
-- [ ] Laptop cargada (y cargador)
-- [ ] Cable de red y/o WiFi configurado para el aula
-- [ ] Zapatilla eléctrica y cables necesarios
-- [ ] Adaptadores de video (HDMI, USB-C, VGA según haga falta)
-- [ ] Póster impreso (si aplica) o archivo listo para proyectar
-- [ ] Agua (van a hablar mucho)
-- [ ] Llegar 15 minutos antes para montar la estación
+- [x] Laptop cargada y cargador disponible.
+- [x] Conectividad configurada para utilizar ChatGPT y el túnel.
+- [x] Zapatilla eléctrica y cables necesarios preparados.
+- [x] Adaptadores de video preparados, según corresponda.
+- [x] Archivo del póster listo para proyectar.
+- [x] Video descargado y reproducción sin Internet comprobada.
+- [x] Agua preparada.
+- [x] Llegada prevista con 15 minutos de anticipación.
 
 ---
 
-*Última actualización: [fecha del cuatrimestre]*
+*Última actualización: 15/11/2026.*

@@ -1,20 +1,22 @@
 # IA aplicada al diagnóstico de redes con MCP y un gemelo digital en GNS3
 
-Trabajo Práctico Integrador N.º 4 de **Gestión Operativa y Seguridad en Redes**, 
+Trabajo Práctico Integrador N.º 4 de **Gestión Operativa y Seguridad en Redes**.  
+Universidad Tecnológica Nacional — Facultad Regional La Plata.
 
-Universidad Tecnológica Nacional - Facultad Regional La Plata.
-
-**Modalidad:** B: Artículo de revisión del estado del arte.  
+**Modalidad:** B — Artículo de revisión del estado del arte.  
+**Grupo:** 3.  
 **Integrantes:** Facundo Daza e Irineo Hiriart.
 
 ## 1. Descripción
 
 El trabajo estudia la integración de inteligencia artificial, Model Context Protocol (MCP) y gemelos digitales para asistir en el diagnóstico de problemas de red y evaluar posibles soluciones antes de recomendarlas para una red operativa.
 
-La investigación se acompaña de una demostración en GNS3 con dos entornos:
+La investigación se acompaña de una demostración en GNS3 con dos entornos independientes:
 
-- **EMPRESA:** representa la red operativa. La IA dispone de acceso de lectura.
-- **GEMELO:** reproduce manualmente la configuración relevante de EMPRESA y permite probar modificaciones.
+- **EMPRESA:** representa la red operativa. La IA dispone únicamente de acceso de lectura.
+- **GEMELO:** entorno de prueba donde la IA puede reproducir problemas, modificar configuraciones y comprobar los resultados.
+
+La aplicación de correcciones en EMPRESA queda a cargo de su administrador.
 
 Ambas redes están emuladas en GNS3. No se utilizan equipos de una red de producción real.
 
@@ -23,177 +25,195 @@ Ambas redes están emuladas en GNS3. No se utilizan equipos de una red de produc
 - Investigar el estado del arte de la automatización de redes mediante IA y gemelos digitales.
 - Analizar sus oportunidades, limitaciones y riesgos de seguridad.
 - Implementar una demostración de diagnóstico mediante herramientas MCP.
-- Probar una corrección en un entorno separado antes de recomendarla.
+- Reproducir un problema y probar su corrección en un entorno separado.
+- Fundamentar las recomendaciones mediante configuraciones y pruebas observadas.
 - Demostrar el uso de permisos diferenciados y controles de acceso.
 
 ## 3. Alcance de la demostración
 
-Cada entorno contempla tres routers MikroTik CHR y dos hosts VPCS, con direccionamiento IPv4, enrutamiento OSPF y reglas de firewall.
+Cada entorno incluye tres routers MikroTik CHR y dos hosts VPCS, con direccionamiento IPv4, enrutamiento OSPF y reglas de firewall.
 
-Los proyectos y nodos se preparan e inician manualmente. La configuración relevante y la falla se reproducen manualmente en GEMELO.
+Los proyectos y nodos se preparan e inician manualmente. La IA puede comparar EMPRESA y GEMELO y actualizar la configuración relevante del gemelo a solicitud del usuario o para reproducir el problema investigado, conservando las diferencias intencionales de gestión, identidades, MAC y credenciales.
+
+La integración utiliza herramientas generales. No contiene una función específica que identifique o corrija la falla del escenario: la IA debe seleccionar las consultas, interpretar las respuestas y decidir qué cambios probar.
 
 La demostración no incluye:
 
-- Sincronización automática entre EMPRESA y GEMELO.
+- Sincronización continua en segundo plano.
 - Descubrimiento o incorporación automática de dispositivos.
 - Creación, cableado o inicio de nodos mediante la IA.
 - Aplicación automática de cambios sobre EMPRESA.
-- Resolución general de cualquier problema de red.
+- Reversión automática de los cambios.
+- Garantía de resolución de cualquier problema de red.
 
-El gemelo permite evaluar el escenario reproducido. Sus resultados no constituyen una garantía para cualquier condición de producción.
+El gemelo permite evaluar el escenario reproducido. Una comparación parcial no demuestra equivalencia completa entre ambos entornos y sus resultados no garantizan el comportamiento bajo cualquier condición de producción.
 
 ## 4. Escenario de prueba
 
-Una regla incorrecta de firewall bloquea el tráfico ICMP entre una PC y el host que representa al servidor.
+Una regla de firewall introducida manualmente bloquea el tráfico ICMP desde PC hacia el host que representa al servidor.
 
 El procedimiento de demostración es:
 
-1. Comprobar que ambos entornos presentan el mismo problema.
-2. Solicitar a la IA que investigue el síntoma.
-3. Consultar interfaces, direcciones, rutas, vecinos OSPF y reglas de firewall mediante MCP.
-4. Identificar y justificar una corrección.
-5. Probar el cambio exclusivamente en GEMELO.
-6. Verificar que se recupera la comunicación permitida.
-7. Comprobar que un destino protegido continúa bloqueado.
-8. Entregar una recomendación para el administrador.
+1. Comprobar la conectividad inicial e introducir la falla en EMPRESA.
+2. Solicitar a la IA que investigue el síntoma mediante MCP.
+3. Consultar la configuración y el estado de los equipos.
+4. Comparar y adaptar GEMELO cuando sea necesario para reproducir el problema.
+5. Confirmar el bloqueo mediante pruebas desde los extremos y contadores del firewall.
+6. Identificar y justificar una corrección.
+7. Aplicar el cambio exclusivamente en GEMELO.
+8. Repetir las pruebas y comprobar las restricciones relacionadas que deben conservarse.
+9. Presentar un informe y una recomendación para el administrador.
 
-Las pruebas de ping se ejecutan manualmente desde VPCS y se contrastan con los contadores del firewall. La validación es asistida: no se automatizan las pruebas de los hosts.
+Las pruebas desde GEMELO-PC y GEMELO-SRV pueden ejecutarse mediante MCP y contrastarse con los contadores del firewall.
 
-Durante la demostración, EMPRESA conserva la falla para evidenciar que la corrección se aplicó únicamente en GEMELO.
+En el ensayo documentado, la IA confirmó el bloqueo y verificó la recuperación de las respuestas después de deshabilitar la regla únicamente en GEMELO. EMPRESA conservó la falla.
+
+La prueba valida conectividad ICMP. No acredita el funcionamiento de aplicaciones o servicios TCP y UDP.
+
+Los comandos de preparación, limpieza y los resultados se documentan en la Fase 7 de [DesarrolloDemo.md](demo/DesarrolloDemo.md).
 
 ## 5. Tecnologías
 
 | Tecnología | Función |
 |---|---|
-| GNS3 | Ejecutar los dos entornos de laboratorio |
-| MikroTik CHR / RouterOS 7 | Enrutamiento, filtrado y administración |
-| VPCS | Generar tráfico ICMP para las pruebas |
-| OSPF | Intercambiar rutas entre los routers |
+| GNS3 3.0.6 y GNS3 VM sobre VMware | Ejecutar los dos entornos de laboratorio |
+| MikroTik CHR / RouterOS 7.16 | Enrutamiento, filtrado y administración |
+| VPCS 0.8.3 | Representar los extremos y ejecutar pruebas de conectividad |
+| OSPFv2 | Intercambiar rutas entre los routers |
 | Firewall de RouterOS | Aplicar permisos y restricciones de tráfico |
-| Python | Implementar el servidor y las herramientas MCP |
+| Python 3.13 y FastMCP | Implementar el servidor y las herramientas MCP |
 | MCP | Permitir que la IA invoque herramientas del laboratorio |
 | Paramiko y SSH | Consultar y configurar los routers |
-| ChatGPT | Analizar resultados y utilizar las herramientas disponibles |
-| tunnel-client | Conectar el servidor MCP local con ChatGPT |
+| Consolas Telnet de VPCS | Operar los extremos de GEMELO |
+| ChatGPT | Investigar el problema y utilizar las herramientas disponibles |
+| Secure MCP Tunnel y tunnel-client | Conectar el servidor MCP local con ChatGPT |
 | Git y GitHub | Versionar código, documentación y evidencias |
 
-Las versiones concretas utilizadas se registrarán al completar las pruebas de integración.
+Las dependencias de Python se encuentran en [requirements.txt](demo/mcp/requirements.txt).
 
 ## 6. Seguridad
 
-La propuesta incorpora los siguientes controles:
+La implementación incorpora:
 
-- Cuenta dedicada de lectura para consultar EMPRESA.
-- Credenciales independientes para operar sobre GEMELO.
-- Herramientas MCP con destinos y operaciones restringidos.
-- Ausencia de una herramienta genérica para ejecutar comandos arbitrarios.
-- Verificación de claves de host SSH.
-- Restricción del acceso de administración al equipo autorizado.
-- Separación de las redes de datos de ambos entornos.
-- Credenciales fuera del repositorio y de los argumentos enviados por la IA.
-- Registro de las operaciones realizadas.
-- Verificación de que la corrección conserva los bloqueos requeridos.
+- Cuenta `mcp_ro` con permisos de lectura y SSH para consultar los routers.
+- Acceso administrativo con `netadmin` exclusivamente en GEMELO desde el MCP.
+- Destinos limitados al inventario y rechazo de EMPRESA en la capa administrativa.
+- Verificación de claves de host SSH, identidad y MAC de gestión.
+- Restricción del acceso SSH al equipo administrador autorizado.
+- Separación de los segmentos de datos de EMPRESA y GEMELO.
+- Filtrado IPv4 para proteger la gestión y controlar el tráfico del escenario.
+- Autenticación OSPF con HMAC-SHA256.
+- Servicios, mecanismos de acceso MAC e interfaces sin uso deshabilitados.
+- Reglas de descarte de entrada y tránsito IPv6.
+- Archivo `.env` y claves personales de OpenAI excluidos del repositorio.
 
-La cuenta de GEMELO necesita permisos de escritura de RouterOS. La restricción a una operación concreta se implementa además en el código MCP, no equivale a un permiso nativo de RouterOS limitado a una única regla.
+La IA dispone de comandos administrativos generales en GEMELO. Puede modificar su configuración o interrumpir su acceso; la consola de GNS3 permite la recuperación manual.
 
-Estos controles se consideran implementados únicamente después de verificarlos y guardar sus evidencias.
+PC y SRV son simuladores VPCS. Sus consolas Telnet no tienen autenticación propia ni cifran el tráfico, por lo que deben permanecer dentro del entorno de administración de GNS3.
 
-## 7. Estado del proyecto
+Las credenciales son exclusivas del laboratorio y se entregan por un canal privado. Los proyectos portables conservan la configuración persistente de sus equipos.
 
-### Prueba de concepto realizada
+Los controles, sus pruebas y limitaciones se documentan en la Fase 4 de [DesarrolloDemo.md](demo/DesarrolloDemo.md).
 
-- Conexión de un servidor MCP local con un router MikroTik en GNS3.
-- Consulta del nombre del router mediante SSH.
-- Integración con ChatGPT mediante un túnel.
-- Verificación de lectura en vivo después de cambiar manualmente el nombre del router.
-- Se confirma la viabilidad del proyecto.
+## 7. Integración MCP
 
-### Pendiente de implementación y validación
+El servidor publica cuatro herramientas:
 
-- Preparar los proyectos EMPRESA y GEMELO.
-- Configurar direccionamiento, OSPF y firewall.
-- Implementar y verificar los permisos definitivos.
-- Incorporar las herramientas MCP del escenario.
-- Ejecutar las pruebas positivas y negativas.
-- Repetir la demostración al menos tres veces.
-- Preparar las evidencias y la grabación de respaldo.
+| Herramienta | Alcance |
+|---|---|
+| `listar_routers` | Consultar el inventario de routers |
+| `consultar_router` | Ejecutar comandos con `mcp_ro` en EMPRESA y GEMELO |
+| `ejecutar_comando_gemelo` | Ejecutar comandos con `netadmin` en los routers de GEMELO |
+| `ejecutar_comando_vpcs` | Operar las consolas de GEMELO-PC y GEMELO-SRV |
 
-El avance detallado se registra en `progreso.md`
+Las credenciales se cargan localmente y no se solicitan como argumentos de las herramientas.
 
-## 8. Estructura del repositorio
+El servidor incluye instrucciones para investigar con evidencias, reproducir el problema antes de corregirlo, validar los resultados y presentar un informe breve en Markdown dentro del chat. Estas instrucciones orientan a la IA; el formato y la completitud del informe se revisan durante los ensayos.
+
+## 8. Estado del proyecto
+
+Se completaron:
+
+- Construcción y configuración de EMPRESA y GEMELO.
+- Direccionamiento, OSPF y controles de seguridad.
+- Separación de acceso de lectura y administración.
+- Herramientas MCP generales para routers y consolas VPCS.
+- Configuración y arranque del túnel local.
+- Integración y pruebas desde ChatGPT.
+- Diagnóstico y corrección del escenario de firewall en GEMELO.
+- Tres ejecuciones completas y comprobación de una duración de 3–5 minutos.
+- Grabación de una ejecución como respaldo.
+- Distribución de los proyectos portables y reproducción de la integración en otra computadora.
+
+El avance detallado, los aportes y las referencias a commits se registran en [progreso.md](progreso.md).
+
+## 9. Estructura del repositorio
 
 | Ubicación | Contenido |
 |---|---|
-| `README.md` | Descripción e instrucciones generales |
+| `README.md` | Presentación y alcance del proyecto |
 | `progreso.md` | Bitácora de aportes, decisiones y avances |
 | `templates/` | Plantillas y checklist de la cátedra |
-| `documento/` | Artículo final en PDF y su fuente editable |
-| `poster/` | Póster A1 editable y PDF |
-| `demo/` | Código, dependencias y configuraciones de ejemplo |
+| `documento/` | Artículo y material bibliográfico |
+| `poster/` | Póster y archivos de presentación |
+| `demo/README.md` | Instalación y reproducción del laboratorio |
+| `demo/DesarrolloDemo.md` | Desarrollo por fases, comandos y pruebas |
+| `demo/Archivos-GNS3/` | Proyectos portables EMPRESA y GEMELO |
+| `demo/mcp/` | Servidor MCP, conexiones, herramientas y verificaciones |
 | `capturas/` | Evidencias de funcionamiento y seguridad |
 | `diagramas/` | Diagramas de arquitectura y topología |
 
-## 9. Reproducción del laboratorio
+## 10. Reproducción del laboratorio
 
-### Requisitos
+Clonar el repositorio:
 
-- GNS3 y su entorno de virtualización funcionando.
-- Imagen MikroTik CHR 7.16 obtenida desde una fuente oficial.
-- VPCS disponible en GNS3.
-- Python compatible con las dependencias del proyecto.
-- Cliente SSH.
-- Acceso a Internet para utilizar ChatGPT y el túnel MCP.
-
-Las imágenes de máquinas virtuales, credenciales y ejecutables no se incluyen en el repositorio.
-
-### Clonar el repositorio
-
-```powershell
+```bash
 git clone https://github.com/Shelldaza/goys-tp4-integrador.git
 cd goys-tp4-integrador
 ```
 
-### Preparar la demo
+Seguir la [guía de instalación de la demo](demo/README.md), que incluye:
 
-La implementación está en desarrollo. Una vez incorporados los archivos y comprobada la integración, se completará esta sección con:
+1. Importación de los proyectos GNS3.
+2. Preparación de la red Host-only.
+3. Comprobación de identidades, MAC y acceso SSH.
+4. Creación del entorno virtual e instalación de dependencias.
+5. Configuración local de credenciales y consolas.
+6. Verificaciones del MCP.
+7. Creación, configuración e inicio del túnel.
+8. Conexión y primera prueba desde ChatGPT.
 
-1. Versiones y recursos utilizados.
-2. Topología y tabla de direccionamiento.
-3. Configuración de cada router y host.
-4. Instalación de dependencias Python.
-5. Configuración del inventario y las credenciales locales.
-6. Inicio del servidor MCP y del túnel.
-7. Introducción de la falla.
-8. Pruebas de diagnóstico, corrección y restauración.
+Cada instalación necesita su propio entorno virtual, archivo `.env` y perfil local del túnel. El ejecutable `tunnel-client.exe` se obtiene por separado.
 
-Las instrucciones finales deberán permitir repetir el escenario sin depender de conversaciones previas.
+La disponibilidad de conexiones MCP y del túnel debe comprobarse en la cuenta utilizada.
 
-## 10. Evidencias y resultados
+## 11. Evidencias y resultados
 
-Se documentarán las siguientes comprobaciones:
+La documentación incluye comprobaciones de:
 
-| Comprobación | Evidencia esperada |
-|---|---|
-| Red operativa durante la falla | Vecinos OSPF FULL y rutas presentes |
-| Bloqueo inicial | Ping fallido y contador de la regla |
-| Lectura real mediante MCP | Respuestas identificadas por equipo |
-| Restricción de EMPRESA | Intento de escritura rechazado |
-| Corrección en GEMELO | Regla modificada y ping recuperado |
-| Seguridad conservada | Destino protegido bloqueado y contador de descarte |
-| EMPRESA sin cambios | Regla del incidente activa y ping fallido |
-| Repetibilidad | Registro de tres ejecuciones completas |
+- Vecindades y rutas OSPF.
+- Comunicaciones permitidas y bloqueadas.
+- Lectura permitida y escritura rechazada con `mcp_ro`.
+- Autenticación OSPF y recuperación de una vecindad tras restaurar su clave.
+- Acceso SSH desde el origen autorizado y bloqueo desde el origen no autorizado ensayado.
+- Consultas a routers y acceso a las consolas mediante MCP.
+- Reproducción del bloqueo ICMP en GEMELO.
+- Recuperación de conectividad después de corregir únicamente GEMELO.
+- Conservación de EMPRESA sin modificaciones por parte de la IA.
 
-Los resultados se incorporarán después de realizar las pruebas. La conectividad ICMP no se presentará como validación de una aplicación o servicio TCP.
+Las evidencias y los límites de cada comprobación se presentan en [DesarrolloDemo.md](demo/DesarrolloDemo.md). Las pruebas respaldan los comportamientos observados; no constituyen una auditoría completa de seguridad.
 
-## 11. Dependencia de Internet y respaldo
+## 12. Dependencia de Internet y respaldo
 
-GNS3, los routers y las pruebas locales pueden funcionar sin Internet.
+GNS3, los routers y las pruebas locales pueden funcionar sin Internet. La interacción con ChatGPT mediante Secure MCP Tunnel requiere conectividad.
 
-La interacción con ChatGPT mediante el túnel requiere conectividad. Para la feria se preparará una grabación local de una ejecución completa, acompañada de capturas y resultados.
+Se grabó una ejecución como respaldo y se realizaron ensayos completos de la demostración.
 
-El material grabado se identificará como tal y se comprobará su reproducción sin conexión.
+**Video:** [Ver demostración grabada](https://drive.google.com/drive/u/0/folders/1o1cRteSKecS5OazFFu4jLJMQ6N6zNgUc)
 
-## 12. Organización del trabajo
+Para utilizar el respaldo sin Internet, debe descargarse previamente y conservarse una copia local.
+
+## 13. Organización del trabajo
 
 | Integrante | Responsabilidades principales |
 |---|---|
@@ -203,7 +223,7 @@ El material grabado se identificará como tal y se comprobará su reproducción 
 
 Cada integrante realiza commits con su identidad. Los cambios se trabajan en ramas y se revisan mediante pull requests.
 
-## 13. Entregables
+## 14. Entregables
 
 - Artículo de modalidad B de 5–7 páginas, en PDF y con fuente editable.
 - Póster A1 en formato editable y PDF.
@@ -212,21 +232,21 @@ Cada integrante realiza commits con su identidad. Los cambios se trabajan en ram
 - Capturas y resultados verificables.
 - Grabación de respaldo.
 - Bitácora de participación del grupo.
-- Checklist de entrega completo.
+- Checklist de entrega de la cátedra.
 
-## 14. Trabajo futuro
+## 15. Trabajo futuro
 
-- Actualización automática de la configuración del gemelo.
-- Incorporación de nuevos dispositivos.
-- Automatización de pruebas desde los hosts.
-- Evaluación de servicios de aplicación.
-- Ampliación de los escenarios de falla.
-- Evaluación de alternativas de IA local.
+- Evaluar sincronización continua del gemelo.
+- Incorporar nuevos dispositivos y escenarios de falla.
+- Evaluar servicios de aplicación además de ICMP.
+- Incorporar verificadores de configuración.
+- Evaluar mecanismos de reversión automática.
+- Evaluar alternativas de IA local.
 
-Estas capacidades quedan fuera de la demostración inicial.
+Estas ampliaciones no forman parte de las capacidades validadas en el escenario actual.
 
-## 15. Referencias
+## 16. Referencias
 
-Las referencias bibliográficas completas se incluyen en el artículo de `documento/`.
+Las referencias bibliográficas se encuentran en [documento/](documento/).
 
-El artículo debe incorporar al menos seis referencias verificables, incluyendo un trabajo académico, documentación técnica oficial y un RFC o estándar, con un formato de citación consistente.
+El artículo reúne trabajos académicos, documentación técnica oficial y referencias de arquitectura y protocolos, con un formato de citación consistente.

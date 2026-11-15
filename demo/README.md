@@ -51,6 +51,7 @@ El laboratorio utiliza la red Host-only `192.168.57.0/24`.
 | EMPRESA-R3 | `192.168.57.12/24` |
 | GEMELO-R1 | `192.168.57.20/24` |
 | GEMELO-R2 | `192.168.57.21/24` |
+| GEMELO-R3 | `192.168.57.22/24` |
 | GNS3 VM en el entorno original | `192.168.57.130/24` |
 
 1. Configurar VMnet1 como red Host-only y el adaptador del equipo con `192.168.57.1/24`.
@@ -277,11 +278,7 @@ La IA tiene acceso administrativo general en GEMELO. Puede cometer errores o int
 
 ## 13. Alcance de la portabilidad
 
-La integración fue verificada en el equipo de desarrollo. La reproducción completa en otra computadora permanece pendiente de validación.
-
-La red Host-only funciona localmente y no depende del Wi-Fi utilizado para Internet, siempre que no existan conflictos de subred o rutas.
-
-ChatGPT y Secure MCP Tunnel requieren Internet y acceso disponible en la cuenta utilizada.
+La integración fue verificada en el equipo de desarrollo y reproducida en la computadora de otro integrante, incluyendo la importación de los proyectos, las verificaciones locales del MCP y las llamadas desde ChatGPT.
 
 
 **Adicional para verificar:**
