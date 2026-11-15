@@ -55,6 +55,7 @@ Ambos participan en la revisión del trabajo, el registro de avances y la defens
 | 15/11/2026 | Se actualizó la guía de instalación y se registró la reproducción de la integración en otra computadora. | Facundo | 1767602 |
 | 15/11/2026 | Se cerró F8 con tres ejecuciones completas, duración de 3–5 minutos y enlace al video de respaldo. | Facundo | 0ed4814 |
 | 15/11/2026 | Se actualizó el README principal para reflejar las capacidades implementadas y se completó el checklist de entrega. | Facundo | 7d3e2eb |
+| 15/11/2026 | Se reprodujo la demo completa en una segunda computadora (importación de proyectos, red Host-only, `.env`, túnel propio y conexión con ChatGPT). Se ejecutó tres veces el escenario de falla, con duraciones de 2 min 15 s y 2 min 20 s en dos de ellas. Se registró que GEMELO-PC sigue sin alcanzar 10.255.0.3 después de la corrección. Se actualizó el póster. | Irineo | 2283dfd |
 
 Las pruebas previas se registran retrospectivamente. Completar sus fechas y referencias a commits cuando se disponga de esos datos.
 
@@ -124,7 +125,7 @@ Las pruebas previas se registran retrospectivamente. Completar sus fechas y refe
 - Los informes se presentan en el chat mediante instrucciones del servidor; su formato y completitud se revisan durante los ensayos.
 - ChatGPT y el túnel requieren Internet. Se grabó una ejecución como respaldo, enlazada en la Fase 8 de `demo/DesarrolloDemo.md`.
 - Los proyectos portables incluyen MAC de gestión distintas para ambos entornos. Deben conservarse al importar y coincidir con el inventario del MCP.
-- La reproducción completa en otra computadora fue verificada. Al importar los proyectos deben comprobarse la Cloud, las direcciones de gestión y los puertos de consola.
+- La demo se reprodujo en una segunda computadora. Cada instalación necesita su propio túnel y debe comprobar la Cloud, las direcciones de gestión y los puertos de consola.
 - Cada instalación necesita su entorno virtual, archivo `.env` y perfil local del túnel. El acceso desde ChatGPT depende de los permisos y la disponibilidad de la cuenta utilizada.
 - EMPRESA representa una organización ficticia. Las credenciales son exclusivas del laboratorio y se entregan por un canal privado para reproducir la demo.
 - El archivo `.env` y la API key personal de OpenAI no se publican.
