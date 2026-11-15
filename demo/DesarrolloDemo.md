@@ -1711,4 +1711,8 @@ Estas operaciones de preparación y limpieza se distinguen de las acciones reali
 
 ## Fase 8 — Ensayos y respaldo
 
-Pendiente: registrar tres ejecuciones completas, ajustar la demo a 3–5 minutos y comprobar el respaldo grabado.
+Se realizaron tres ejecuciones completas y se comprobó que la demo se ajusta a una duración de 3–5 minutos.
+
+También se grabó una ejecución como respaldo ante problemas de conexión o disponibilidad de ChatGPT y el túnel.
+
+**Video:** [Ver demostración grabada](https://drive.google.com/drive/u/0/folders/1o1cRteSKecS5OazFFu4jLJMQ6N6zNgUc)
